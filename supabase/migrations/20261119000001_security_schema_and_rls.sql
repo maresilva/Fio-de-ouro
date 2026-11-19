@@ -67,6 +67,80 @@ CREATE TABLE IF NOT EXISTS public.football_bets (
     created_by UUID REFERENCES public.profiles(id) DEFAULT auth.uid()
 );
 
+-- Função Atômica no Banco de Dados para Baixa de Aposta (Prevenção Concorrente de Recebimento Duplicado)
+CREATE OR REPLACE FUNCTION public.confirm_bet_payment(
+    p_bet_id UUID,
+    p_received_at TIMESTAMPTZ
+)
+RETURNS JSONB AS $$
+DECLARE
+    v_bet public.football_bets%ROWTYPE;
+    v_user_role TEXT;
+BEGIN
+    -- Verifica autorização do usuário (apenas gestor, operador ou financeiro)
+    v_user_role := public.get_current_user_role();
+    IF v_user_role NOT IN ('gestor', 'operador', 'financeiro') THEN
+        RAISE EXCEPTION 'Acesso negado: perfil % não possui autorização para dar baixa.', v_user_role;
+    END IF;
+
+    -- Bloqueio pessimista de linha (FOR UPDATE) para garantir atomicidade sob concorrência
+    SELECT * INTO v_bet
+    FROM public.football_bets
+    WHERE id = p_bet_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Aposta não localizada.');
+    END IF;
+
+    -- Se já estiver paga, recusa a segunda confirmação atômica
+    IF v_bet.status = 'pago' THEN
+        RETURN jsonb_build_object(
+            'success', false, 
+            'error', 'Aposta já se encontra paga. Recebimento duplicado recusado pelo banco.',
+            'already_paid', true,
+            'received_at', v_bet.received_at
+        );
+    END IF;
+
+    -- Atualização atômica
+    UPDATE public.football_bets
+    SET status = 'pago',
+        received_at = p_received_at,
+        received_by = auth.uid()
+    WHERE id = p_bet_id;
+
+    -- Registro atômico na auditoria
+    INSERT INTO public.audit_logs (
+        timestamp,
+        user_id,
+        user_name,
+        user_role,
+        action,
+        entity,
+        entity_id,
+        reference,
+        details,
+        previous_state,
+        new_state
+    ) VALUES (
+        timezone('utc'::text, now()),
+        auth.uid(),
+        COALESCE((SELECT name FROM public.profiles WHERE id = auth.uid()), 'Operador'),
+        v_user_role,
+        'BAIXA_APOSTA_ATOMICA',
+        'FootballBet',
+        p_bet_id::text,
+        'Baixa Aposta ' || v_bet.client_name,
+        'Baixa confirmada atomicamente no banco para aposta de R$ ' || v_bet.amount::text,
+        row_to_json(v_bet)::jsonb,
+        jsonb_build_object('id', p_bet_id, 'status', 'pago', 'received_at', p_received_at, 'received_by', auth.uid())
+    );
+
+    RETURN jsonb_build_object('success', true, 'bet_id', p_bet_id, 'status', 'pago');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- 5. Painel de Futebol: Fechamentos Diários
 -- Regra de negócio: Saldo = Apurado - Descarrego
 -- Constraint: Fechamento único por data
