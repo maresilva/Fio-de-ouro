@@ -44,6 +44,8 @@ export const UserManagement: React.FC = () => {
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('operador');
   const [newBadge, setNewBadge] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Edit User Modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -56,6 +58,8 @@ export const UserManagement: React.FC = () => {
   // Reset Password Modal
   const [showResetPassModal, setShowResetPassModal] = useState(false);
   const [userForResetPass, setUserForResetPass] = useState<User | null>(null);
+  const [adminNewPass, setAdminNewPass] = useState('');
+  const [adminConfirmPass, setAdminConfirmPass] = useState('');
 
   // Check if current user is Gestor / Administrador
   const isGestor = currentUser?.role === 'gestor';
@@ -99,27 +103,40 @@ export const UserManagement: React.FC = () => {
   const countOperadores = users.filter(u => u.role === 'operador').length;
   const countAtivos = users.filter(u => u.isActive !== false).length;
 
-  const handleCreateUser = async (e: React.FormEvent) => {
+  const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await addUser({
+    if (newPassword.length < 6) {
+      addToast('error', 'Senha Curta', 'A senha de acesso deve possuir pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      addToast('error', 'Senhas Diferentes', 'A confirmação de senha não confere.');
+      return;
+    }
+
+    const res = addUser({
       name: newName,
       email: newEmail,
       role: newRole,
       badge: newBadge,
+      initialPassword: newPassword,
     });
 
     if (res.success) {
       addToast(
         'success',
-        'Convite Registrado',
-        `Usuário ${newName} cadastrado. Convite de acesso seguro gerado via provedor de autenticação.`
+        'Usuário Criado',
+        `Usuário ${newName} cadastrado com sucesso com sua senha oficial.`
       );
       setShowAddModal(false);
       setNewName('');
       setNewEmail('');
       setNewRole('operador');
       setNewBadge('');
+      setNewPassword('');
+      setConfirmPassword('');
     } else {
       addToast('error', 'Erro ao Criar', res.error || 'Verifique os dados informados.');
     }
@@ -134,11 +151,11 @@ export const UserManagement: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
+  const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
 
-    const res = await updateUser(editingUser.id, {
+    const res = updateUser(editingUser.id, {
       name: editName,
       role: editRole,
       badge: editBadge,
@@ -146,7 +163,7 @@ export const UserManagement: React.FC = () => {
     });
 
     if (res.success) {
-      addToast('success', 'Usuário Atualizado', `Dados de ${editName} atualizados no servidor.`);
+      addToast('success', 'Usuário Atualizado', `Dados de ${editName} atualizados no sistema.`);
       setShowEditModal(false);
       setEditingUser(null);
     } else {
@@ -156,35 +173,49 @@ export const UserManagement: React.FC = () => {
 
   const handleOpenResetPass = (user: User) => {
     setUserForResetPass(user);
+    setAdminNewPass('');
+    setAdminConfirmPass('');
     setShowResetPassModal(true);
   };
 
-  const handleSaveResetPass = async (e: React.FormEvent) => {
+  const handleSaveResetPass = (e: React.FormEvent) => {
     e.preventDefault();
     if (!userForResetPass) return;
 
-    const res = await resetUserPassword(userForResetPass.id);
+    if (adminNewPass.length < 6) {
+      addToast('error', 'Senha Curta', 'A nova senha deve possuir pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (adminNewPass !== adminConfirmPass) {
+      addToast('error', 'Senhas Diferentes', 'A confirmação da nova senha não confere.');
+      return;
+    }
+
+    const res = resetUserPassword(userForResetPass.id, adminNewPass);
     if (res.success) {
       addToast(
         'success',
-        'Link de Redefinição Enviado',
-        `Enviamos um link seguro de recuperação para ${userForResetPass.email}.`
+        'Senha Atualizada',
+        `A nova senha oficial de ${userForResetPass.name} foi salva com sucesso.`
       );
       setShowResetPassModal(false);
       setUserForResetPass(null);
+      setAdminNewPass('');
+      setAdminConfirmPass('');
     } else {
-      addToast('error', 'Erro na Redefinição', res.error || 'Não foi possível enviar o link.');
+      addToast('error', 'Erro na Redefinição', res.error || 'Não foi possível salvar a nova senha.');
     }
   };
 
-  const handleToggleStatus = async (user: User) => {
+  const handleToggleStatus = (user: User) => {
     const actionLabel = user.isActive === false ? 'ativar' : 'desativar';
     if (
       window.confirm(
         `Tem certeza que deseja ${actionLabel} o acesso de ${user.name}?`
       )
     ) {
-      const res = await toggleUserStatus(user.id);
+      const res = toggleUserStatus(user.id);
       if (res.success) {
         addToast(
           'info',
@@ -641,9 +672,40 @@ export const UserManagement: React.FC = () => {
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Senha Oficial de Acesso *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                placeholder="Mínimo 6 dígitos"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Confirmar Senha *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                placeholder="Repita a senha"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </div>
+          </div>
+
           <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-950">
-            <strong className="block text-purple-900 font-semibold mb-0.5">Convite Oficial Seguro</strong>
-            O usuário receberá um convite oficial por e-mail pelo provedor seguro para ativar seu acesso e registrar sua senha de forma criptografada.
+            <strong className="block text-purple-900 font-semibold mb-0.5">Acesso Oficial Cadastrado</strong>
+            O operador só conseguirá acessar o sistema utilizando o e-mail cadastrado e a senha oficial definida aqui.
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
@@ -658,7 +720,7 @@ export const UserManagement: React.FC = () => {
               type="submit"
               className="px-5 py-2 text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl shadow-sm"
             >
-              Enviar Convite de Acesso
+              Cadastrar Usuário
             </button>
           </div>
         </form>
@@ -764,21 +826,47 @@ export const UserManagement: React.FC = () => {
           setUserForResetPass(null);
         }}
         title="Redefinir Senha do Usuário"
-        subtitle={userForResetPass ? `Disparar redefinição para ${userForResetPass.name}` : ''}
+        subtitle={userForResetPass ? `Definir nova senha oficial para ${userForResetPass.name}` : ''}
       >
         {userForResetPass && (
           <form onSubmit={handleSaveResetPass} className="space-y-4">
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1">
-              <strong className="block text-amber-900 font-semibold mb-0.5">
-                Redefinição Segura por Provedor de Autenticação
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-950 space-y-1">
+              <strong className="block text-purple-900 font-semibold mb-0.5">
+                Definição de Nova Senha Oficial
               </strong>
               <p>
-                Para garantir conformidade de segurança e evitar senhas em texto puro, um link seguro de recuperação
-                será enviado para o e-mail: <strong>{userForResetPass.email}</strong>.
+                Como Gestor Geral, você pode definir diretamente a nova senha oficial de <strong>{userForResetPass.name}</strong> ({userForResetPass.email}).
               </p>
-              <p className="text-[11px] text-amber-800 pt-1">
-                O colaborador poderá clicar no link oficial e cadastrar sua nova senha com criptografia em repouso.
-              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Nova Senha Oficial *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                placeholder="Mínimo 6 caracteres"
+                value={adminNewPass}
+                onChange={e => setAdminNewPass(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Confirmar Nova Senha *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                placeholder="Repita a nova senha"
+                value={adminConfirmPass}
+                onChange={e => setAdminConfirmPass(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
@@ -794,10 +882,10 @@ export const UserManagement: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm flex items-center space-x-1.5"
+                className="px-5 py-2 text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl shadow-sm flex items-center space-x-1.5"
               >
                 <KeyRound className="w-4 h-4" />
-                <span>Enviar Link de Redefinição</span>
+                <span>Salvar Nova Senha</span>
               </button>
             </div>
           </form>

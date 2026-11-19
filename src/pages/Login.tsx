@@ -11,12 +11,11 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
-  Settings,
   RefreshCw,
 } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { login, sendPasswordReset, isConfigured, missingConfigKeys } = useAuth();
+  const { login, sendPasswordReset } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -32,13 +31,13 @@ export const Login: React.FC = () => {
   const [recoverError, setRecoverError] = useState('');
   const [isRecovering, setIsRecovering] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setIsLoading(true);
 
     try {
-      const res = await login(email, password);
+      const res = login(email, password);
       if (res.success) {
         navigate('/visao-geral');
       } else {
@@ -49,13 +48,13 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleRecover = async (e: React.FormEvent) => {
+  const handleRecover = (e: React.FormEvent) => {
     e.preventDefault();
     setRecoverError('');
     setIsRecovering(true);
 
     try {
-      const res = await sendPasswordReset(recoverEmail);
+      const res = sendPasswordReset(recoverEmail);
       if (res.success) {
         setRecoverSuccess(true);
         setTimeout(() => {
@@ -64,7 +63,7 @@ export const Login: React.FC = () => {
           setRecoverEmail('');
         }, 3000);
       } else {
-        setRecoverError(res.error || 'Não foi possível enviar o e-mail de recuperação.');
+        setRecoverError(res.error || 'Não foi possível enviar a recuperação.');
       }
     } finally {
       setIsRecovering(false);
@@ -91,7 +90,7 @@ export const Login: React.FC = () => {
               <span className="text-amber-300 font-black">Fio de Ouro</span>
             </h1>
             <p className="mt-2 sm:mt-4 text-emerald-100/90 text-xs sm:text-sm leading-relaxed">
-              Autenticação segura via PostgreSQL, controle estrito de acessos, fechamentos diários e auditoria financeira.
+              Autenticação segura, controle estrito de acessos, fechamentos diários e auditoria financeira.
             </p>
           </div>
 
@@ -106,7 +105,7 @@ export const Login: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-amber-300 flex-shrink-0" />
-              <span>Perfis protegidos no servidor (Gestor, Operador, Financeiro, Auditor)</span>
+              <span>Perfis protegidos (Gestor, Operador, Financeiro, Auditor)</span>
             </div>
           </div>
         </div>
@@ -120,22 +119,6 @@ export const Login: React.FC = () => {
                 Informe suas credenciais corporativas oficiais para entrar no ERP.
               </p>
             </div>
-
-            {/* Aviso de Configuração de Ambiente caso falte VITE_SUPABASE_* */}
-            {!isConfigured && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1.5">
-                <div className="flex items-center space-x-1.5 font-bold text-amber-900">
-                  <Settings className="w-4 h-4 text-amber-600" />
-                  <span>Modo de Transição Local Ativo</span>
-                </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  As variáveis do Supabase ainda não foram adicionadas na Vercel. O login de gestor (<code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">jvitorscr1995@gmail.com</code>) está liberado em contingência local para você não perder o acesso ao sistema.
-                </p>
-                <div className="pt-0.5 text-[10px] text-amber-700">
-                  Para conectar o banco definitivo, defina na Vercel: <span className="font-mono font-bold">VITE_SUPABASE_URL</span> e <span className="font-mono font-bold">VITE_SUPABASE_ANON_KEY</span>.
-                </div>
-              </div>
-            )}
 
             {errorMessage && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-center space-x-2.5 animate-in fade-in duration-150">
@@ -160,7 +143,7 @@ export const Login: React.FC = () => {
                       if (errorMessage) setErrorMessage('');
                     }}
                     className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900 transition-colors"
-                    placeholder="operador@fiodeouro.com.br"
+                    placeholder="jvitorscr1995@gmail.com"
                   />
                 </div>
               </div>
@@ -224,7 +207,7 @@ export const Login: React.FC = () => {
 
           <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-center space-x-2 text-[11px] text-slate-400">
             <Shield className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Ambiente seguro protegido por Row Level Security (RLS)</span>
+            <span>Ambiente seguro corporativo com controle de perfis e auditoria</span>
           </div>
         </div>
       </div>
@@ -235,13 +218,13 @@ export const Login: React.FC = () => {
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
             <h3 className="text-lg font-bold text-slate-900">Recuperação de Senha</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Informe seu e-mail corporativo cadastrado para receber o link seguro de redefinição de senha.
+              Informe seu e-mail corporativo cadastrado para recuperar o acesso.
             </p>
 
             {recoverSuccess ? (
               <div className="my-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center space-x-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                <span>Link de recuperação enviado com sucesso para o e-mail informado!</span>
+                <span>Instruções enviadas para o e-mail corporativo cadastrado!</span>
               </div>
             ) : (
               <form onSubmit={handleRecover} className="mt-4 space-y-4">
@@ -261,7 +244,7 @@ export const Login: React.FC = () => {
                     required
                     value={recoverEmail}
                     onChange={e => setRecoverEmail(e.target.value)}
-                    placeholder="operador@fiodeouro.com.br"
+                    placeholder="jvitorscr1995@gmail.com"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -288,7 +271,7 @@ export const Login: React.FC = () => {
                         <span>Enviando...</span>
                       </>
                     ) : (
-                      <span>Enviar Link de Recuperação</span>
+                      <span>Recuperar Senha</span>
                     )}
                   </button>
                 </div>
