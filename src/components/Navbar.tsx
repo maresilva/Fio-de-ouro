@@ -80,23 +80,25 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
         {/* Brand */}
-        <div className="flex items-center space-x-3">
-          <Link to="/visao-geral" className="flex items-center space-x-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-700/20 group-hover:scale-105 transition-transform">
-              <Trophy className="w-5 h-5 text-amber-300" />
+        <div className="flex items-center min-w-0">
+          <Link to="/visao-geral" className="flex items-center space-x-2 sm:space-x-2.5 group min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-700/20 group-hover:scale-105 transition-transform flex-shrink-0">
+              <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center space-x-1.5">
-                <span className="font-extrabold text-base tracking-tight text-slate-900">
+                <span className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 whitespace-nowrap">
                   Painel de Futebol
                 </span>
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide">
+                <span className="hidden sm:inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide flex-shrink-0">
                   OPERACIONAL
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">Controle de Apostas & Fechamentos</p>
+              <p className="hidden md:block text-[11px] text-slate-500 font-medium truncate">
+                Controle de Apostas & Fechamentos
+              </p>
             </div>
           </Link>
         </div>
@@ -155,21 +157,21 @@ export const Navbar: React.FC = () => {
         </nav>
 
         {/* Right side controls */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           {/* Data Backup & Migration Modal Trigger */}
           <button
             type="button"
             onClick={() => setShowMigrationModal(true)}
             title="Backup & Migração de Lançamentos"
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors"
+            className="flex items-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors"
           >
-            <HardDrive className="w-3.5 h-3.5 text-emerald-600" />
+            <HardDrive className="w-4 h-4 text-emerald-600" />
             <span className="hidden sm:inline">Backup / Migração</span>
           </button>
 
           {/* User profile info & Password / Logout */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2 pl-2 border-l border-slate-200">
-            <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+          <div className="flex items-center space-x-1 sm:space-x-1.5 pl-1.5 sm:pl-2 border-l border-slate-200">
+            <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm flex-shrink-0">
               {currentUser?.name ? currentUser.name.substring(0, 2) : 'US'}
             </div>
 
@@ -186,12 +188,12 @@ export const Navbar: React.FC = () => {
               </span>
             </div>
 
-            {/* Manage Users Button (Gestor only) */}
+            {/* Manage Users Button (Gestor only, visible on tablet/desktop as mobile has it in BottomNav) */}
             {isGestor && (
               <Link
                 to="/usuarios"
                 title="Gerenciar Usuários e Operadores"
-                className={`p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition-colors ${
+                className={`hidden sm:flex p-2 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] items-center justify-center rounded-xl transition-colors ${
                   location.pathname === '/usuarios'
                     ? 'text-purple-700 bg-purple-100'
                     : 'text-purple-600 hover:text-purple-800 hover:bg-purple-50'
@@ -206,7 +208,7 @@ export const Navbar: React.FC = () => {
               type="button"
               onClick={() => setShowPasswordModal(true)}
               title="Alterar Minha Senha"
-              className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors"
+              className="p-2 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors"
             >
               <KeyRound className="w-4 h-4" />
             </button>
@@ -215,7 +217,7 @@ export const Navbar: React.FC = () => {
             <button
               onClick={handleLogout}
               title="Encerrar Sessão"
-              className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+              className="p-2 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>
