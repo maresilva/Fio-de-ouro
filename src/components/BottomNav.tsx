@@ -31,13 +31,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenPasswordModal }) => 
 
   const pendingBetsCount = footballBets.filter(b => !b.isCancelled && b.status === 'nao_pago').length;
 
-  const isGestor =
-    currentUser?.role === 'gestor' ||
-    currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com';
+  const isGestor = currentUser?.role === 'gestor';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowMoreMenu(false);
-    logout();
+    await logout();
     navigate('/');
   };
 

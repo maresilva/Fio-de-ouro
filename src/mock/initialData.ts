@@ -67,17 +67,7 @@ export const INITIAL_CLIENTS: Client[] = [
   },
 ];
 
-export const INITIAL_USERS: User[] = [
-  {
-    id: 'user-vitor',
-    name: 'Vitor',
-    email: 'jvitorscr1995@gmail.com',
-    role: 'gestor',
-    badge: 'Operação',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-];
+export const INITIAL_USERS: User[] = [];
 
 export const INITIAL_DRAWERS: Drawer[] = [
   { id: 'drawer-1', name: 'Terminal 01 - Caixa Rápido', code: 'T01', status: 'aberto', currentShiftId: 'shift-101' },

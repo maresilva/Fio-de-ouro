@@ -76,8 +76,7 @@ export const Sidebar: React.FC = () => {
         })}
 
         {/* Gestão Exclusiva do Gestor */}
-        {(currentUser?.role === 'gestor' ||
-          currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com') && (
+        {currentUser?.role === 'gestor' && (
           <div className="pt-3 mt-3 border-t border-slate-800 space-y-1">
             <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 uppercase flex items-center justify-between">
               <span>Administração</span>

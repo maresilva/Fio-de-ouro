@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { User, UserRole } from '../types';
 import { Modal } from '../components/Modal';
+import { DataMigrationModal } from '../components/DataMigrationModal';
 import {
   Users,
   UserPlus,
@@ -18,6 +19,7 @@ import {
   Ban,
   ArrowLeft,
   Sparkles,
+  HardDrive,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -37,11 +39,11 @@ export const UserManagement: React.FC = () => {
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('operador');
   const [newBadge, setNewBadge] = useState('');
-  const [newPassword, setNewPassword] = useState('');
 
   // Edit User Modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -54,13 +56,9 @@ export const UserManagement: React.FC = () => {
   // Reset Password Modal
   const [showResetPassModal, setShowResetPassModal] = useState(false);
   const [userForResetPass, setUserForResetPass] = useState<User | null>(null);
-  const [adminNewPass, setAdminNewPass] = useState('');
-  const [adminConfirmPass, setAdminConfirmPass] = useState('');
 
   // Check if current user is Gestor / Administrador
-  const isGestor =
-    currentUser?.role === 'gestor' ||
-    currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com';
+  const isGestor = currentUser?.role === 'gestor';
 
   if (!isGestor) {
     return (
@@ -101,29 +99,27 @@ export const UserManagement: React.FC = () => {
   const countOperadores = users.filter(u => u.role === 'operador').length;
   const countAtivos = users.filter(u => u.isActive !== false).length;
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword.trim().length < 6) {
-      addToast('error', 'Senha Inválida', 'A senha oficial de acesso deve ter no mínimo 6 caracteres.');
-      return;
-    }
 
-    const res = addUser({
+    const res = await addUser({
       name: newName,
       email: newEmail,
       role: newRole,
       badge: newBadge,
-      initialPassword: newPassword,
     });
 
     if (res.success) {
-      addToast('success', 'Usuário Criado', `Usuário ${newName} cadastrado com sucesso!`);
+      addToast(
+        'success',
+        'Convite Registrado',
+        `Usuário ${newName} cadastrado. Convite de acesso seguro gerado via provedor de autenticação.`
+      );
       setShowAddModal(false);
       setNewName('');
       setNewEmail('');
       setNewRole('operador');
       setNewBadge('');
-      setNewPassword('');
     } else {
       addToast('error', 'Erro ao Criar', res.error || 'Verifique os dados informados.');
     }
@@ -138,11 +134,11 @@ export const UserManagement: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
 
-    const res = updateUser(editingUser.id, {
+    const res = await updateUser(editingUser.id, {
       name: editName,
       role: editRole,
       badge: editBadge,
@@ -150,7 +146,7 @@ export const UserManagement: React.FC = () => {
     });
 
     if (res.success) {
-      addToast('success', 'Usuário Atualizado', `Dados de ${editName} atualizados.`);
+      addToast('success', 'Usuário Atualizado', `Dados de ${editName} atualizados no servidor.`);
       setShowEditModal(false);
       setEditingUser(null);
     } else {
@@ -160,47 +156,35 @@ export const UserManagement: React.FC = () => {
 
   const handleOpenResetPass = (user: User) => {
     setUserForResetPass(user);
-    setAdminNewPass('');
-    setAdminConfirmPass('');
     setShowResetPassModal(true);
   };
 
-  const handleSaveResetPass = (e: React.FormEvent) => {
+  const handleSaveResetPass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userForResetPass) return;
 
-    if (adminNewPass !== adminConfirmPass) {
-      addToast('error', 'Senhas Divergentes', 'A nova senha e a confirmação não conferem.');
-      return;
-    }
-
-    if (adminNewPass.length < 6) {
-      addToast('error', 'Senha Curta', 'A senha deve possuir no mínimo 6 caracteres.');
-      return;
-    }
-
-    const res = resetUserPassword(userForResetPass.id, adminNewPass);
+    const res = await resetUserPassword(userForResetPass.id);
     if (res.success) {
       addToast(
         'success',
-        'Senha Redefinida',
-        `A senha de ${userForResetPass.name} foi redefinida com sucesso.`
+        'Link de Redefinição Enviado',
+        `Enviamos um link seguro de recuperação para ${userForResetPass.email}.`
       );
       setShowResetPassModal(false);
       setUserForResetPass(null);
     } else {
-      addToast('error', 'Erro na Redefinição', res.error || 'Não foi possível salvar.');
+      addToast('error', 'Erro na Redefinição', res.error || 'Não foi possível enviar o link.');
     }
   };
 
-  const handleToggleStatus = (user: User) => {
+  const handleToggleStatus = async (user: User) => {
     const actionLabel = user.isActive === false ? 'ativar' : 'desativar';
     if (
       window.confirm(
         `Tem certeza que deseja ${actionLabel} o acesso de ${user.name}?`
       )
     ) {
-      const res = toggleUserStatus(user.id);
+      const res = await toggleUserStatus(user.id);
       if (res.success) {
         addToast(
           'info',
@@ -263,14 +247,25 @@ export const UserManagement: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold shadow-sm shadow-purple-700/20 transition-all flex items-center justify-center space-x-1.5 active:scale-95"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Cadastrar Novo Usuário</span>
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMigrationModal(true)}
+            className="min-h-[44px] px-4 py-2.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition-all flex items-center justify-center space-x-1.5 active:scale-95"
+          >
+            <HardDrive className="w-4 h-4 text-emerald-600" />
+            <span>Backup / Migração de Lançamentos</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="min-h-[44px] px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold shadow-sm shadow-purple-700/20 transition-all flex items-center justify-center space-x-1.5 active:scale-95"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Cadastrar Novo Usuário</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -646,22 +641,9 @@ export const UserManagement: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Senha Oficial de Acesso *
-            </label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              placeholder="Digite a senha oficial (mínimo 6 caracteres)"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono"
-            />
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
-              Cadastre a senha com a qual o funcionário irá se autenticar no sistema.
-            </span>
+          <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-950">
+            <strong className="block text-purple-900 font-semibold mb-0.5">Convite Oficial Seguro</strong>
+            O usuário receberá um convite oficial por e-mail pelo provedor seguro para ativar seu acesso e registrar sua senha de forma criptografada.
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
@@ -676,7 +658,7 @@ export const UserManagement: React.FC = () => {
               type="submit"
               className="px-5 py-2 text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl shadow-sm"
             >
-              Cadastrar Usuário
+              Enviar Convite de Acesso
             </button>
           </div>
         </form>
@@ -782,42 +764,21 @@ export const UserManagement: React.FC = () => {
           setUserForResetPass(null);
         }}
         title="Redefinir Senha do Usuário"
-        subtitle={userForResetPass ? `Definir nova senha para ${userForResetPass.name}` : ''}
+        subtitle={userForResetPass ? `Disparar redefinição para ${userForResetPass.name}` : ''}
       >
         {userForResetPass && (
           <form onSubmit={handleSaveResetPass} className="space-y-4">
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950">
-              Como <strong>Gestor</strong>, você pode definir uma nova senha para este operador caso ele tenha esquecido ou precise de redefinição de acesso.
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Nova Senha *
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={adminNewPass}
-                onChange={e => setAdminNewPass(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Confirmar Nova Senha *
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={adminConfirmPass}
-                onChange={e => setAdminConfirmPass(e.target.value)}
-                placeholder="Repita a nova senha exatamente igual"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-              />
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1">
+              <strong className="block text-amber-900 font-semibold mb-0.5">
+                Redefinição Segura por Provedor de Autenticação
+              </strong>
+              <p>
+                Para garantir conformidade de segurança e evitar senhas em texto puro, um link seguro de recuperação
+                será enviado para o e-mail: <strong>{userForResetPass.email}</strong>.
+              </p>
+              <p className="text-[11px] text-amber-800 pt-1">
+                O colaborador poderá clicar no link oficial e cadastrar sua nova senha com criptografia em repouso.
+              </p>
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
@@ -833,15 +794,21 @@ export const UserManagement: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm flex items-center space-x-1"
+                className="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm flex items-center space-x-1.5"
               >
                 <KeyRound className="w-4 h-4" />
-                <span>Salvar Nova Senha</span>
+                <span>Enviar Link de Redefinição</span>
               </button>
             </div>
           </form>
         )}
       </Modal>
+
+      {/* Modal de Backup / Migração de Lançamentos */}
+      <DataMigrationModal
+        isOpen={showMigrationModal}
+        onClose={() => setShowMigrationModal(false)}
+      />
     </div>
   );
 };

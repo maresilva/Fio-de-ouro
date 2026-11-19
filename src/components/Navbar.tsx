@@ -1,44 +1,40 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useApp } from '../context/AppContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Modal } from './Modal';
+import { DataMigrationModal } from './DataMigrationModal';
 import {
-  RotateCcw,
   LogOut,
   Trophy,
   Layers,
   CalendarCheck,
   LayoutDashboard,
-  User,
   Users,
-  Shield,
   KeyRound,
-  CheckCircle2,
+  HardDrive,
+  RefreshCw,
 } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
 
 export const Navbar: React.FC = () => {
-  const { currentUser, users, switchUser, logout, changePassword } = useAuth();
-  const { resetAllData, addToast } = useApp();
+  const { currentUser, isGestor, logout, changePassword } = useAuth();
+  const { addToast } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Modal Alterar Senha
+  // Modals
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    switchUser(e.target.value);
-  };
-
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
-  const handleChangePasswordSubmit = (e: React.FormEvent) => {
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
@@ -46,20 +42,24 @@ export const Navbar: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 4) {
-      addToast('error', 'Senha Curta', 'A nova senha deve ter pelo menos 4 caracteres.');
+    if (newPassword.length < 6) {
+      addToast('error', 'Senha Curta', 'A nova senha deve ter pelo menos 6 caracteres.');
       return;
     }
 
-    const res = changePassword(currentPassword, newPassword);
-    if (res.success) {
-      addToast('success', 'Senha Atualizada', 'Sua senha de acesso foi alterada com sucesso.');
-      setShowPasswordModal(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } else {
-      addToast('error', 'Erro ao Alterar Senha', res.error || 'Verifique a senha atual informada.');
+    setIsChangingPassword(true);
+    try {
+      const res = await changePassword(newPassword);
+      if (res.success) {
+        addToast('success', 'Senha Atualizada', 'Sua senha oficial foi alterada com sucesso.');
+        setShowPasswordModal(false);
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        addToast('error', 'Erro ao Alterar Senha', res.error || 'Não foi possível atualizar a senha.');
+      }
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -101,18 +101,18 @@ export const Navbar: React.FC = () => {
           </Link>
         </div>
 
-        {/* Center shortcuts */}
-        <nav className="hidden md:flex items-center space-x-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
+        {/* Central Navigation */}
+        <nav className="hidden md:flex items-center space-x-1 bg-slate-100/80 p-1 rounded-xl">
           <Link
             to="/visao-geral"
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
-              location.pathname === '/visao-geral' || location.pathname === '/dashboard'
-                ? 'bg-white text-slate-900 shadow-sm'
+              location.pathname === '/visao-geral'
+                ? 'bg-white text-emerald-700 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Visão geral</span>
+            <span>Visão Geral</span>
           </Link>
 
           <Link
@@ -139,8 +139,7 @@ export const Navbar: React.FC = () => {
             <span>Fechamentos</span>
           </Link>
 
-          {(currentUser?.role === 'gestor' ||
-            currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com') && (
+          {isGestor && (
             <Link
               to="/usuarios"
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
@@ -157,57 +156,38 @@ export const Navbar: React.FC = () => {
 
         {/* Right side controls */}
         <div className="flex items-center space-x-3">
-          {/* Role switcher */}
-          <div className="hidden sm:flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
-            <span className="text-[10px] uppercase font-bold text-slate-400">Perfil:</span>
-            <select
-              value={currentUser?.id}
-              onChange={handleRoleChange}
-              className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-            >
-              {users.map(u => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.role.toUpperCase()})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Reset Demo Data button */}
+          {/* Data Backup & Migration Modal Trigger */}
           <button
-            onClick={() => {
-              if (window.confirm('Deseja restaurar os dados de demonstração iniciais?')) {
-                resetAllData();
-              }
-            }}
-            title="Restaurar Banco Demonstrativo"
-            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            type="button"
+            onClick={() => setShowMigrationModal(true)}
+            title="Backup & Migração de Lançamentos"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors"
           >
-            <RotateCcw className="w-4 h-4" />
+            <HardDrive className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">Backup / Migração</span>
           </button>
 
           {/* User profile info & Password / Logout */}
           <div className="flex items-center space-x-1.5 sm:space-x-2 pl-2 border-l border-slate-200">
             <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-              {currentUser?.name.substring(0, 2)}
+              {currentUser?.name ? currentUser.name.substring(0, 2) : 'US'}
             </div>
 
             <div className="hidden lg:block text-left text-xs">
               <div className="font-bold text-slate-900 truncate max-w-[120px]">
-                {currentUser?.name}
+                {currentUser?.name || 'Usuário'}
               </div>
               <span
                 className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded border capitalize ${getRoleBadgeColor(
                   currentUser?.role
                 )}`}
               >
-                {currentUser?.role}
+                {currentUser?.role || 'operador'}
               </span>
             </div>
 
             {/* Manage Users Button (Gestor only) */}
-            {(currentUser?.role === 'gestor' ||
-              currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com') && (
+            {isGestor && (
               <Link
                 to="/usuarios"
                 title="Gerenciar Usuários e Operadores"
@@ -256,22 +236,8 @@ export const Navbar: React.FC = () => {
               <strong>Usuário:</strong> {currentUser?.name} ({currentUser?.email})
             </div>
             <div className="text-[11px] text-slate-500">
-              Mantenha sua senha segura e confidencial (mínimo de 6 caracteres).
+              A nova senha será salva de forma criptografada no banco de dados. Mínimo de 6 caracteres.
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Senha Atual *
-            </label>
-            <input
-              type="password"
-              required
-              value={currentPassword}
-              onChange={e => setCurrentPassword(e.target.value)}
-              placeholder="Digite sua senha atual"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-            />
           </div>
 
           <div>
@@ -314,14 +280,27 @@ export const Navbar: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm flex items-center space-x-1.5"
+              disabled={isChangingPassword}
+              className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm flex items-center space-x-1"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Salvar Nova Senha</span>
+              {isChangingPassword ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                <span>Salvar Nova Senha</span>
+              )}
             </button>
           </div>
         </form>
       </Modal>
+
+      {/* Modal de Backup & Migração de Dados Operacionais */}
+      <DataMigrationModal
+        isOpen={showMigrationModal}
+        onClose={() => setShowMigrationModal(false)}
+      />
     </header>
   );
 };

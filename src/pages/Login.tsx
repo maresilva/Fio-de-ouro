@@ -11,47 +11,63 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  Settings,
+  RefreshCw,
 } from 'lucide-react';
-import { INITIAL_USERS } from '../mock/initialData';
 
 export const Login: React.FC = () => {
-  const { login, users } = useAuth();
+  const { login, sendPasswordReset, isConfigured, missingConfigKeys } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('jvitorscr1995@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Modal Recuperar Senha
   const [showRecoverModal, setShowRecoverModal] = useState(false);
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverSuccess, setRecoverSuccess] = useState(false);
+  const [recoverError, setRecoverError] = useState('');
+  const [isRecovering, setIsRecovering] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setIsLoading(true);
 
-    const res = login(email, password);
-    if (res.success) {
-      navigate('/visao-geral');
-    } else {
-      setErrorMessage(res.error || 'Credenciais inválidas. Verifique os dados digitados.');
+    try {
+      const res = await login(email, password);
+      if (res.success) {
+        navigate('/visao-geral');
+      } else {
+        setErrorMessage(res.error || 'Credenciais inválidas. Verifique os dados digitados.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSelectDemoUser = (userEmail: string) => {
-    setEmail(userEmail);
-    setPassword('');
-    setErrorMessage('');
-  };
-
-  const handleRecover = (e: React.FormEvent) => {
+  const handleRecover = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (recoverEmail) {
-      setRecoverSuccess(true);
-      setTimeout(() => {
-        setRecoverSuccess(false);
-        setShowRecoverModal(false);
-      }, 2500);
+    setRecoverError('');
+    setIsRecovering(true);
+
+    try {
+      const res = await sendPasswordReset(recoverEmail);
+      if (res.success) {
+        setRecoverSuccess(true);
+        setTimeout(() => {
+          setRecoverSuccess(false);
+          setShowRecoverModal(false);
+          setRecoverEmail('');
+        }, 3000);
+      } else {
+        setRecoverError(res.error || 'Não foi possível enviar o e-mail de recuperação.');
+      }
+    } finally {
+      setIsRecovering(false);
     }
   };
 
@@ -72,10 +88,10 @@ export const Login: React.FC = () => {
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
               Painel Operacional <br />
-              <span className="text-amber-300 font-black">Futebol & Loterias</span>
+              <span className="text-amber-300 font-black">Fio de Ouro</span>
             </h1>
             <p className="mt-2 sm:mt-4 text-emerald-100/90 text-xs sm:text-sm leading-relaxed">
-              Controle completo de apostas, baixas de pagamentos, fechamentos diários e auditoria financeira.
+              Autenticação segura via PostgreSQL, controle estrito de acessos, fechamentos diários e auditoria financeira.
             </p>
           </div>
 
@@ -90,7 +106,7 @@ export const Login: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-amber-300 flex-shrink-0" />
-              <span>Trilha de auditoria e correção de fechamentos</span>
+              <span>Perfis protegidos no servidor (Gestor, Operador, Financeiro, Auditor)</span>
             </div>
           </div>
         </div>
@@ -101,9 +117,27 @@ export const Login: React.FC = () => {
             <div className="mb-5 sm:mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Acesso ao Sistema</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Identifique-se com suas credenciais ou selecione o acesso rápido abaixo.
+                Informe suas credenciais corporativas oficiais para entrar no ERP.
               </p>
             </div>
+
+            {/* Aviso de Configuração de Ambiente caso falte VITE_SUPABASE_* */}
+            {!isConfigured && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1">
+                <div className="flex items-center space-x-1.5 font-bold text-amber-900">
+                  <Settings className="w-4 h-4 text-amber-600" />
+                  <span>Configuração de Segurança Necessária</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Para autenticação segura com o banco de dados dedicado, defina as variáveis no painel da Vercel ou no arquivo <code className="bg-amber-100 px-1 py-0.5 rounded font-mono">.env</code>:
+                </p>
+                <ul className="text-[10px] font-mono list-disc list-inside text-amber-900 font-semibold pt-0.5">
+                  {missingConfigKeys.map(k => (
+                    <li key={k}>{k}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {errorMessage && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-center space-x-2.5 animate-in fade-in duration-150">
@@ -115,7 +149,7 @@ export const Login: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  E-mail de Acesso
+                  E-mail Corporativo
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -128,7 +162,7 @@ export const Login: React.FC = () => {
                       if (errorMessage) setErrorMessage('');
                     }}
                     className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900 transition-colors"
-                    placeholder="jvitorscr1995@gmail.com"
+                    placeholder="operador@fiodeouro.com.br"
                   />
                 </div>
               </div>
@@ -136,7 +170,7 @@ export const Login: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Senha de Acesso
+                    Senha Oficial
                   </label>
                   <button
                     type="button"
@@ -172,47 +206,27 @@ export const Login: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full min-h-[48px] mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-700/20 flex items-center justify-center space-x-2 transition-all active:scale-[0.98] group"
+                disabled={isLoading}
+                className="w-full min-h-[48px] mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-700/20 flex items-center justify-center space-x-2 transition-all active:scale-[0.98] group disabled:opacity-70 cursor-pointer"
               >
-                <span>Entrar no Sistema</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Autenticando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Entrar no Sistema</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
               </button>
             </form>
-
-            {/* Quick Profiles Selector */}
-            <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
-                <span>Contas Cadastradas:</span>
-                <span className="text-[10px] text-slate-500 font-medium">Clique para preencher o e-mail</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                {(users || INITIAL_USERS).map(u => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    disabled={u.isActive === false}
-                    onClick={() => handleSelectDemoUser(u.email)}
-                    className={`min-h-[44px] text-left p-3 rounded-xl border transition-all text-xs active:scale-95 flex items-center justify-between ${
-                      u.isActive === false
-                        ? 'border-slate-200 bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed'
-                        : 'border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-slate-800 shadow-xs'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-bold truncate text-slate-900">{u.name}</div>
-                      <div className="text-[10px] text-slate-500 font-mono truncate">{u.email}</div>
-                    </div>
-                    <div className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 ml-2 flex-shrink-0">
-                      {u.badge || u.role}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
-          <div className="mt-6 text-center text-[11px] text-slate-400">
-            Painel interno otimizado para dispositivos móveis e desktop
+          <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-center space-x-2 text-[11px] text-slate-400">
+            <Shield className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Ambiente seguro protegido por Row Level Security (RLS)</span>
           </div>
         </div>
       </div>
@@ -223,42 +237,61 @@ export const Login: React.FC = () => {
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
             <h3 className="text-lg font-bold text-slate-900">Recuperação de Senha</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Informe o e-mail cadastrado para receber instruções seguras de redefinição de acesso.
+              Informe seu e-mail corporativo cadastrado para receber o link seguro de redefinição de senha.
             </p>
 
             {recoverSuccess ? (
               <div className="my-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center space-x-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                <span>Link de recuperação enviado com sucesso para seu e-mail corporativo!</span>
+                <span>Link de recuperação enviado com sucesso para o e-mail informado!</span>
               </div>
             ) : (
               <form onSubmit={handleRecover} className="mt-4 space-y-4">
+                {recoverError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-center space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <span>{recoverError}</span>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    E-mail
+                    E-mail Corporativo
                   </label>
                   <input
                     type="email"
                     required
                     value={recoverEmail}
                     onChange={e => setRecoverEmail(e.target.value)}
-                    placeholder="seu.email@loterica.com.br"
+                    placeholder="operador@fiodeouro.com.br"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
-                <div className="flex justify-end space-x-2">
+
+                <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setShowRecoverModal(false)}
+                    onClick={() => {
+                      setShowRecoverModal(false);
+                      setRecoverError('');
+                    }}
                     className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+                    disabled={isRecovering}
+                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center space-x-1.5"
                   >
-                    Enviar Link
+                    {isRecovering ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <span>Enviar Link de Recuperação</span>
+                    )}
                   </button>
                 </div>
               </form>

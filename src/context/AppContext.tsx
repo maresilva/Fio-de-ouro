@@ -563,6 +563,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: 'Data do pagamento é obrigatória.' };
     }
 
+    if (params.betId) {
+      const existingBetPrize = footballPrizes.find(p => p.betId === params.betId);
+      if (existingBetPrize) {
+        addToast(
+          'error',
+          'Prêmio Já Pago',
+          `Já existe um prêmio registrado para a aposta selecionada (R$ ${existingBetPrize.amount.toFixed(2)} em ${existingBetPrize.paidAt}).`
+        );
+        return { success: false, error: 'Prêmio já registrado para esta aposta.' };
+      }
+    }
+
     const newPrize: FootballPrize = {
       id: 'fprz-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       clientId: client.id,
@@ -1730,3 +1742,5 @@ export const useApp = () => {
   }
   return context;
 };
+
+export const useAppContext = useApp;

@@ -1,13 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { INITIAL_USERS } from '../mock/initialData';
+import { supabase, isSupabaseConfigured, getSupabaseConfigStatus } from '../lib/supabase';
+import { sanitizeLegacyCredentials } from '../services/dataMigration';
 
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
-  login: (email: string, password?: string) => { success: boolean; error?: string };
-  logout: () => void;
-  switchUser: (userId: string) => void;
+  isLoadingSession: boolean;
+  isConfigured: boolean;
+  missingConfigKeys: string[];
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  isGestor: boolean;
   hasRole: (roles: UserRole[]) => boolean;
   canReviewShifts: boolean;
   canAccessPayroll: boolean;
@@ -20,15 +26,13 @@ interface AuthContextType {
   canRegisterPrize: boolean;
   canCreateClosing: boolean;
   canCorrectClosing: boolean;
-  changePassword: (oldPassword: string, newPassword: string) => { success: boolean; error?: string };
   // Gestão de Usuários e Acessos
   addUser: (params: {
     name: string;
     email: string;
     role: UserRole;
     badge?: string;
-    initialPassword?: string;
-  }) => { success: boolean; user?: User; error?: string };
+  }) => Promise<{ success: boolean; user?: User; error?: string }>;
   updateUser: (
     userId: string,
     params: {
@@ -37,16 +41,13 @@ interface AuthContextType {
       badge?: string;
       isActive?: boolean;
     }
-  ) => { success: boolean; error?: string };
-  resetUserPassword: (userId: string, newPass: string) => { success: boolean; error?: string };
-  toggleUserStatus: (userId: string) => { success: boolean; error?: string };
+  ) => Promise<{ success: boolean; error?: string }>;
+  resetUserPassword: (userId: string) => Promise<{ success: boolean; error?: string }>;
+  toggleUserStatus: (userId: string) => Promise<{ success: boolean; error?: string }>;
+  refreshUsers: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const AUTH_STORAGE_KEY = 'erp_loterica_current_user';
-const USERS_STORAGE_KEY = 'erp_app_users';
-const PASSWORDS_STORAGE_KEY = 'erp_user_passwords';
 
 function getRoleBadgeDefault(role: UserRole): string {
   switch (role) {
@@ -64,245 +65,159 @@ function getRoleBadgeDefault(role: UserRole): string {
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(() => {
-    try {
-      const saved = localStorage.getItem(USERS_STORAGE_KEY);
-      if (saved) {
-        const parsed: User[] = JSON.parse(saved);
-        // Remove contas legadas de demonstração e preserva somente Vitor (ou novos cadastrados por ele)
-        const vitor = parsed.find(u => u.email.toLowerCase() === 'jvitorscr1995@gmail.com');
-        if (vitor) {
-          return [
-            {
-              ...vitor,
-              name: 'Vitor',
-              email: 'jvitorscr1995@gmail.com',
-              role: 'gestor',
-              badge: 'Operação',
-              isActive: true,
-            },
-          ];
-        }
-      }
-      return INITIAL_USERS;
-    } catch {
-      return INITIAL_USERS;
-    }
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
 
-  const [passwords, setPasswords] = useState<Record<string, string>>(() => {
-    try {
-      const saved = localStorage.getItem(PASSWORDS_STORAGE_KEY);
-      const parsed = saved ? JSON.parse(saved) : {};
-      if (!parsed['user-vitor']) {
-        parsed['user-vitor'] = '123456';
-      }
-      return parsed;
-    } catch {
-      return { 'user-vitor': '123456' };
-    }
-  });
+  const configStatus = getSupabaseConfigStatus();
 
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.email?.toLowerCase() === 'jvitorscr1995@gmail.com') {
-          return {
-            ...parsed,
-            name: 'Vitor',
-            email: 'jvitorscr1995@gmail.com',
-            role: 'gestor',
-            badge: 'Operação',
-            isActive: true,
-          };
-        }
-      } catch {
-        // ignora erro de parse
-      }
-    }
-    return INITIAL_USERS[0];
-  });
-
+  // 1. Sanitização na inicialização: limpa chaves de texto plano legadas
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+    sanitizeLegacyCredentials();
+  }, []);
+
+  // 2. Carrega perfil seguro a partir do banco de dados (PostgreSQL / Supabase)
+  const fetchProfile = async (authUserId: string, authEmail?: string, authMetadata?: any): Promise<User | null> => {
+    if (!supabase) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUserId)
+        .maybeSingle();
+
+      if (data && !error) {
+        return {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          role: data.role as UserRole,
+          badge: data.badge || getRoleBadgeDefault(data.role),
+          isActive: data.is_active !== false,
+          createdAt: data.created_at,
+        };
+      }
+
+      // Se o perfil ainda não existe na tabela profiles, cria o registro inicial
+      const initialRole: UserRole = authMetadata?.role || 'operador';
+      const initialName = authMetadata?.name || authEmail?.split('@')[0] || 'Usuário';
+      const newProfile = {
+        id: authUserId,
+        name: initialName,
+        email: authEmail || '',
+        role: initialRole,
+        badge: authMetadata?.badge || getRoleBadgeDefault(initialRole),
+        is_active: true,
+      };
+
+      await supabase.from('profiles').insert(newProfile);
+
+      return {
+        id: authUserId,
+        name: initialName,
+        email: authEmail || '',
+        role: initialRole,
+        badge: newProfile.badge,
+        isActive: true,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const refreshUsers = async () => {
+    if (!supabase || !currentUser) return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('name');
+
+      if (data && !error) {
+        setUsers(
+          data.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            role: p.role as UserRole,
+            badge: p.badge || getRoleBadgeDefault(p.role),
+            isActive: p.is_active !== false,
+            createdAt: p.created_at,
+          }))
+        );
+      }
+    } catch {
+      // Falha silenciosa
+    }
+  };
+
+  // 3. Listener da sessão do Supabase Auth
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      setIsLoadingSession(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    // Checa sessão inicial ativa
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
+
+      if (session?.user) {
+        const user = await fetchProfile(
+          session.user.id,
+          session.user.email,
+          session.user.user_metadata
+        );
+        if (isMounted) setCurrentUser(user);
+      } else {
+        if (isMounted) setCurrentUser(null);
+      }
+      if (isMounted) setIsLoadingSession(false);
+    });
+
+    // Ouve alterações no estado de autenticação
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+
+      if (session?.user) {
+        const user = await fetchProfile(
+          session.user.id,
+          session.user.email,
+          session.user.user_metadata
+        );
+        if (isMounted) setCurrentUser(user);
+      } else {
+        if (isMounted) setCurrentUser(null);
+      }
+      if (isMounted) setIsLoadingSession(false);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Atualiza lista de usuários quando o gestor logar
+  useEffect(() => {
+    if (currentUser?.role === 'gestor') {
+      refreshUsers();
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
-  }, [passwords]);
+  // 4. Métodos de Autenticação
 
-  useEffect(() => {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-  }, [users]);
+  const login = async (
+    emailInput: string,
+    passwordInput: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = (emailInput || '').trim().toLowerCase();
 
-  const changePassword = (oldPassword: string, newPassword: string): { success: boolean; error?: string } => {
-    if (!currentUser) return { success: false, error: 'Usuário não autenticado.' };
-
-    const currentPass = passwords[currentUser.id];
-    if (!currentPass || oldPassword !== currentPass) {
-      return { success: false, error: 'A senha atual informada está incorreta.' };
-    }
-
-    if (!newPassword || newPassword.length < 6) {
-      return { success: false, error: 'A nova senha deve possuir no mínimo 6 caracteres.' };
-    }
-
-    setPasswords(prev => ({
-      ...prev,
-      [currentUser.id]: newPassword,
-    }));
-
-    return { success: true };
-  };
-
-  const isGestorUser = (user: User | null): boolean => {
-    if (!user) return false;
-    return user.role === 'gestor' || user.email.toLowerCase() === 'jvitorscr1995@gmail.com';
-  };
-
-  const addUser = (params: {
-    name: string;
-    email: string;
-    role: UserRole;
-    badge?: string;
-    initialPassword?: string;
-  }): { success: boolean; user?: User; error?: string } => {
-    if (!currentUser || !isGestorUser(currentUser)) {
-      return { success: false, error: 'Apenas gestores podem cadastrar novos operadores e usuários.' };
-    }
-
-    const emailClean = params.email.trim().toLowerCase();
-    const nameClean = params.name.trim();
-
-    if (!nameClean || !emailClean) {
-      return { success: false, error: 'Nome e e-mail são obrigatórios.' };
-    }
-
-    if (users.some(u => u.email.toLowerCase() === emailClean)) {
-      return { success: false, error: 'Já existe um usuário cadastrado com este e-mail corporativo.' };
-    }
-
-    const initialPass = params.initialPassword?.trim();
-    if (!initialPass || initialPass.length < 6) {
-      return { success: false, error: 'A senha oficial de acesso é obrigatória e deve possuir no mínimo 6 caracteres.' };
-    }
-
-    const newUser: User = {
-      id: 'user-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
-      name: nameClean,
-      email: emailClean,
-      role: params.role,
-      badge: params.badge?.trim() || getRoleBadgeDefault(params.role),
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    setUsers(prev => [...prev, newUser]);
-
-    setPasswords(prev => ({
-      ...prev,
-      [newUser.id]: initialPass,
-    }));
-
-    return { success: true, user: newUser };
-  };
-
-  const updateUser = (
-    userId: string,
-    params: {
-      name: string;
-      role: UserRole;
-      badge?: string;
-      isActive?: boolean;
-    }
-  ): { success: boolean; error?: string } => {
-    if (!currentUser || !isGestorUser(currentUser)) {
-      return { success: false, error: 'Apenas gestores podem editar dados de usuários.' };
-    }
-
-    const target = users.find(u => u.id === userId);
-    if (!target) return { success: false, error: 'Usuário não localizado.' };
-
-    if (userId === currentUser.id && params.isActive === false) {
-      return { success: false, error: 'Você não pode desativar seu próprio acesso enquanto logado.' };
-    }
-
-    setUsers(prev =>
-      prev.map(u =>
-        u.id === userId
-          ? {
-              ...u,
-              name: params.name.trim(),
-              role: params.role,
-              badge: params.badge?.trim() || u.badge,
-              isActive: params.isActive !== undefined ? params.isActive : u.isActive,
-            }
-          : u
-      )
-    );
-
-    if (userId === currentUser.id) {
-      setCurrentUser(prev =>
-        prev
-          ? {
-              ...prev,
-              name: params.name.trim(),
-              role: params.role,
-              badge: params.badge?.trim() || prev.badge,
-            }
-          : prev
-      );
-    }
-
-    return { success: true };
-  };
-
-  const resetUserPassword = (userId: string, newPass: string): { success: boolean; error?: string } => {
-    if (!currentUser || !isGestorUser(currentUser)) {
-      return { success: false, error: 'Apenas gestores podem redefinir senhas de operadores.' };
-    }
-
-    const target = users.find(u => u.id === userId);
-    if (!target) return { success: false, error: 'Usuário não localizado.' };
-
-    if (!newPass || newPass.trim().length < 6) {
-      return { success: false, error: 'A nova senha deve possuir pelo menos 6 caracteres.' };
-    }
-
-    setPasswords(prev => ({
-      ...prev,
-      [userId]: newPass.trim(),
-    }));
-
-    return { success: true };
-  };
-
-  const toggleUserStatus = (userId: string): { success: boolean; error?: string } => {
-    if (!currentUser || !isGestorUser(currentUser)) {
-      return { success: false, error: 'Apenas gestores podem ativar ou desativar acessos.' };
-    }
-
-    if (userId === currentUser.id) {
-      return { success: false, error: 'Você não pode desativar seu próprio acesso.' };
-    }
-
-    const target = users.find(u => u.id === userId);
-    if (!target) return { success: false, error: 'Usuário não localizado.' };
-
-    const newStatus = target.isActive === false ? true : false;
-    setUsers(prev => prev.map(u => (u.id === userId ? { ...u, isActive: newStatus } : u)));
-
-    return { success: true };
-  };
-
-  const login = (email: string, passwordInput?: string): { success: boolean; error?: string } => {
-    const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail) {
       return { success: false, error: 'Por favor, informe seu e-mail corporativo.' };
     }
@@ -311,41 +226,251 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Por favor, digite sua senha de acesso.' };
     }
 
-    const found = users.find(u => u.email.toLowerCase() === cleanEmail);
-    if (!found) {
-      return { success: false, error: 'Usuário não encontrado. Verifique o e-mail informado.' };
-    }
-
-    if (found.isActive === false) {
-      return { success: false, error: 'Este usuário está desativado pelo administrador do sistema.' };
-    }
-
-    // Validação estrita de senha oficial - sem fallback para senhas de teste
-    const expectedPassword = passwords[found.id];
-    if (!expectedPassword) {
+    if (!isSupabaseConfigured || !supabase) {
       return {
         success: false,
-        error: 'Usuário sem senha oficial configurada. Solicite ao gestor a definição de sua senha.',
+        error:
+          'Integração de autenticação pendente. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel da Vercel ou no arquivo .env.',
       };
     }
 
-    if (passwordInput !== expectedPassword) {
-      return { success: false, error: 'Senha incorreta. Verifique suas credenciais de acesso.' };
-    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: passwordInput,
+      });
 
-    setCurrentUser(found);
-    return { success: true };
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          return {
+            success: false,
+            error: 'Credenciais inválidas. Verifique seu e-mail corporativo e senha oficial.',
+          };
+        }
+        if (error.message.includes('Email not confirmed')) {
+          return {
+            success: false,
+            error: 'E-mail não confirmado. Verifique a caixa de entrada para ativar seu acesso.',
+          };
+        }
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        const profile = await fetchProfile(
+          data.user.id,
+          data.user.email,
+          data.user.user_metadata
+        );
+
+        if (profile && profile.isActive === false) {
+          await supabase.auth.signOut();
+          setCurrentUser(null);
+          return {
+            success: false,
+            error: 'Este acesso foi desativado pela administração do sistema.',
+          };
+        }
+
+        setCurrentUser(profile);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Não foi possível validar a sessão do usuário.' };
+    } catch {
+      return { success: false, error: 'Erro de conexão com o servidor de autenticação.' };
+    }
   };
 
-  const logout = () => {
+  const logout = async (): Promise<void> => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setCurrentUser(null);
+    setUsers([]);
   };
 
-  const switchUser = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      setCurrentUser(user);
+  const sendPasswordReset = async (emailInput: string): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = (emailInput || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      return { success: false, error: 'Informe seu e-mail corporativo para recuperação.' };
     }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        success: false,
+        error: 'Serviço de autenticação não configurado no ambiente.',
+      };
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${window.location.origin}/`,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Erro ao solicitar recuperação de senha.' };
+    }
+  };
+
+  const changePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    if (!currentUser || !supabase) {
+      return { success: false, error: 'Usuário não autenticado no provedor seguro.' };
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'A nova senha deve possuir no mínimo 6 caracteres.' };
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Erro ao atualizar a senha no provedor seguro.' };
+    }
+  };
+
+  // 5. Gestão de Usuários (Restrita ao Gestor via Servidor)
+
+  const isGestor = currentUser?.role === 'gestor';
+
+  const addUser = async (params: {
+    name: string;
+    email: string;
+    role: UserRole;
+    badge?: string;
+  }): Promise<{ success: boolean; user?: User; error?: string }> => {
+    if (!isGestor) {
+      return { success: false, error: 'Apenas gestores possuem permissão para cadastrar operadores.' };
+    }
+
+    const emailClean = params.email.trim().toLowerCase();
+    const nameClean = params.name.trim();
+
+    if (!nameClean || !emailClean) {
+      return { success: false, error: 'Nome e e-mail corporativo são obrigatórios.' };
+    }
+
+    if (!supabase) {
+      return { success: false, error: 'Provedor de autenticação não configurado.' };
+    }
+
+    try {
+      // Dispara convite oficial por e-mail pelo Supabase Auth
+      // O usuário define sua própria senha de forma criptografada pelo link seguro
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: emailClean,
+        options: {
+          data: {
+            name: nameClean,
+            role: params.role,
+            badge: params.badge?.trim() || getRoleBadgeDefault(params.role),
+          },
+        },
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      await refreshUsers();
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Falha ao registrar convite do usuário no servidor.' };
+    }
+  };
+
+  const updateUser = async (
+    userId: string,
+    params: {
+      name: string;
+      role: UserRole;
+      badge?: string;
+      isActive?: boolean;
+    }
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!isGestor) {
+      return { success: false, error: 'Apenas gestores podem editar perfis de usuários.' };
+    }
+
+    if (userId === currentUser?.id && params.isActive === false) {
+      return { success: false, error: 'Você não pode desativar seu próprio acesso enquanto logado.' };
+    }
+
+    if (!supabase) {
+      return { success: false, error: 'Provedor de banco de dados não configurado.' };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: params.name.trim(),
+          role: params.role,
+          badge: params.badge?.trim(),
+          is_active: params.isActive !== undefined ? params.isActive : true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      await refreshUsers();
+      if (userId === currentUser?.id) {
+        const updatedSelf = await fetchProfile(userId);
+        if (updatedSelf) setCurrentUser(updatedSelf);
+      }
+
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Erro ao atualizar dados no servidor.' };
+    }
+  };
+
+  const resetUserPassword = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+    if (!isGestor) {
+      return { success: false, error: 'Apenas gestores podem solicitar redefinição de senhas.' };
+    }
+
+    const target = users.find(u => u.id === userId);
+    if (!target) return { success: false, error: 'Usuário não localizado.' };
+
+    return sendPasswordReset(target.email);
+  };
+
+  const toggleUserStatus = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+    if (!isGestor) {
+      return { success: false, error: 'Apenas gestores podem ativar ou desativar acessos.' };
+    }
+
+    if (userId === currentUser?.id) {
+      return { success: false, error: 'Você não pode desativar seu próprio acesso.' };
+    }
+
+    const target = users.find(u => u.id === userId);
+    if (!target) return { success: false, error: 'Usuário não localizado.' };
+
+    const newStatus = target.isActive === false;
+    return updateUser(userId, {
+      name: target.name,
+      role: target.role,
+      badge: target.badge,
+      isActive: newStatus,
+    });
   };
 
   const hasRole = (roles: UserRole[]): boolean => {
@@ -353,7 +478,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return roles.includes(currentUser.role);
   };
 
-  const isGestor = isGestorUser(currentUser);
+  // 6. Matriz de Permissões Rigorosa (Baseada no Perfil Verificado do Servidor)
   const canReviewShifts = isGestor;
   const canAccessPayroll = isGestor || currentUser?.role === 'financeiro';
   const canAccessFinance = isGestor || currentUser?.role === 'financeiro' || currentUser?.role === 'auditor';
@@ -361,20 +486,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const canOperateCash = isGestor || currentUser?.role === 'operador';
 
   // Permissões do Painel de Futebol
-  const canCreateBet = true;
+  const canCreateBet = isGestor || currentUser?.role === 'operador';
   const canReceiveBet = isGestor || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
   const canRegisterPrize = isGestor || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
   const canCreateClosing = isGestor || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
-  const canCorrectClosing = isGestor; // Exclusivo do gestor
+  const canCorrectClosing = isGestor; // EXCLUSIVO DO GESTOR
 
   return (
     <AuthContext.Provider
       value={{
         currentUser,
         users,
+        isLoadingSession,
+        isConfigured: configStatus.configured,
+        missingConfigKeys: configStatus.missingKeys,
         login,
         logout,
-        switchUser,
+        sendPasswordReset,
+        changePassword,
+        isGestor,
         hasRole,
         canReviewShifts,
         canAccessPayroll,
@@ -386,11 +516,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         canRegisterPrize,
         canCreateClosing,
         canCorrectClosing,
-        changePassword,
         addUser,
         updateUser,
         resetUserPassword,
         toggleUserStatus,
+        refreshUsers,
       }}
     >
       {children}
@@ -398,10 +528,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth deve ser utilizado dentro de um AuthProvider');
   }
   return context;
 };
