@@ -144,13 +144,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const changePassword = (oldPassword: string, newPassword: string): { success: boolean; error?: string } => {
     if (!currentUser) return { success: false, error: 'Usuário não autenticado.' };
 
-    const currentPass = passwords[currentUser.id] || '123456';
-    if (oldPassword !== currentPass) {
+    const currentPass = passwords[currentUser.id];
+    if (!currentPass || oldPassword !== currentPass) {
       return { success: false, error: 'A senha atual informada está incorreta.' };
     }
 
-    if (!newPassword || newPassword.length < 4) {
-      return { success: false, error: 'A nova senha deve possuir no mínimo 4 caracteres.' };
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'A nova senha deve possuir no mínimo 6 caracteres.' };
     }
 
     setPasswords(prev => ({
@@ -188,6 +188,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Já existe um usuário cadastrado com este e-mail corporativo.' };
     }
 
+    const initialPass = params.initialPassword?.trim();
+    if (!initialPass || initialPass.length < 6) {
+      return { success: false, error: 'A senha oficial de acesso é obrigatória e deve possuir no mínimo 6 caracteres.' };
+    }
+
     const newUser: User = {
       id: 'user-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
       name: nameClean,
@@ -200,7 +205,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUsers(prev => [...prev, newUser]);
 
-    const initialPass = params.initialPassword?.trim() || '123456';
     setPasswords(prev => ({
       ...prev,
       [newUser.id]: initialPass,
@@ -267,8 +271,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const target = users.find(u => u.id === userId);
     if (!target) return { success: false, error: 'Usuário não localizado.' };
 
-    if (!newPass || newPass.trim().length < 4) {
-      return { success: false, error: 'A nova senha deve possuir pelo menos 4 caracteres.' };
+    if (!newPass || newPass.trim().length < 6) {
+      return { success: false, error: 'A nova senha deve possuir pelo menos 6 caracteres.' };
     }
 
     setPasswords(prev => ({
@@ -316,8 +320,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Este usuário está desativado pelo administrador do sistema.' };
     }
 
-    // Validação estrita de senha
-    const expectedPassword = passwords[found.id] || '123456';
+    // Validação estrita de senha oficial - sem fallback para senhas de teste
+    const expectedPassword = passwords[found.id];
+    if (!expectedPassword) {
+      return {
+        success: false,
+        error: 'Usuário sem senha oficial configurada. Solicite ao gestor a definição de sua senha.',
+      };
+    }
+
     if (passwordInput !== expectedPassword) {
       return { success: false, error: 'Senha incorreta. Verifique suas credenciais de acesso.' };
     }

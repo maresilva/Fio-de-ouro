@@ -256,7 +256,7 @@ export const Navbar: React.FC = () => {
               <strong>Usuário:</strong> {currentUser?.name} ({currentUser?.email})
             </div>
             <div className="text-[11px] text-slate-500">
-              * Senha padrão inicial para contas de demonstração: <strong>123456</strong>
+              Mantenha sua senha segura e confidencial (mínimo de 6 caracteres).
             </div>
           </div>
 
@@ -281,10 +281,10 @@ export const Navbar: React.FC = () => {
             <input
               type="password"
               required
-              minLength={4}
+              minLength={6}
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              placeholder="Digite a nova senha (mínimo 4 caracteres)"
+              placeholder="Digite a nova senha (mínimo 6 caracteres)"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
             />
           </div>
@@ -296,7 +296,7 @@ export const Navbar: React.FC = () => {
             <input
               type="password"
               required
-              minLength={4}
+              minLength={6}
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               placeholder="Repita a nova senha exatamente igual"

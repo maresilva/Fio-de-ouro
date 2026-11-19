@@ -41,7 +41,7 @@ export const UserManagement: React.FC = () => {
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('operador');
   const [newBadge, setNewBadge] = useState('');
-  const [newPassword, setNewPassword] = useState('123456');
+  const [newPassword, setNewPassword] = useState('');
 
   // Edit User Modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -103,6 +103,11 @@ export const UserManagement: React.FC = () => {
 
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newPassword || newPassword.trim().length < 6) {
+      addToast('error', 'Senha Inválida', 'A senha oficial de acesso deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
     const res = addUser({
       name: newName,
       email: newEmail,
@@ -118,7 +123,7 @@ export const UserManagement: React.FC = () => {
       setNewEmail('');
       setNewRole('operador');
       setNewBadge('');
-      setNewPassword('123456');
+      setNewPassword('');
     } else {
       addToast('error', 'Erro ao Criar', res.error || 'Verifique os dados informados.');
     }
@@ -169,8 +174,8 @@ export const UserManagement: React.FC = () => {
       return;
     }
 
-    if (adminNewPass.length < 4) {
-      addToast('error', 'Senha Curta', 'A senha deve possuir no mínimo 4 caracteres.');
+    if (adminNewPass.length < 6) {
+      addToast('error', 'Senha Curta', 'A senha deve possuir no mínimo 6 caracteres.');
       return;
     }
 
@@ -643,18 +648,19 @@ export const UserManagement: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Senha Inicial de Acesso * (Padrão: 123456)
+              Senha Oficial de Acesso *
             </label>
             <input
-              type="text"
+              type="password"
               required
-              minLength={4}
+              minLength={6}
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
+              placeholder="Digite a senha oficial (mínimo 6 caracteres)"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono"
             />
             <span className="text-[10px] text-slate-400 mt-0.5 block">
-              O usuário poderá alterar a senha depois diretamente pelo painel.
+              Cadastre a senha com a qual o funcionário irá se autenticar no sistema.
             </span>
           </div>
 
@@ -791,10 +797,10 @@ export const UserManagement: React.FC = () => {
               <input
                 type="password"
                 required
-                minLength={4}
+                minLength={6}
                 value={adminNewPass}
                 onChange={e => setAdminNewPass(e.target.value)}
-                placeholder="Mínimo 4 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
               />
             </div>
@@ -806,10 +812,10 @@ export const UserManagement: React.FC = () => {
               <input
                 type="password"
                 required
-                minLength={4}
+                minLength={6}
                 value={adminConfirmPass}
                 onChange={e => setAdminConfirmPass(e.target.value)}
-                placeholder="Repita a nova senha"
+                placeholder="Repita a nova senha exatamente igual"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
               />
             </div>

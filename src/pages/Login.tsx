@@ -19,7 +19,7 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('jvitorscr1995@gmail.com');
-  const [password, setPassword] = useState('123456');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showRecoverModal, setShowRecoverModal] = useState(false);
@@ -40,7 +40,7 @@ export const Login: React.FC = () => {
 
   const handleSelectDemoUser = (userEmail: string) => {
     setEmail(userEmail);
-    setPassword('123456');
+    setPassword('');
     setErrorMessage('');
   };
 
@@ -179,11 +179,11 @@ export const Login: React.FC = () => {
               </button>
             </form>
 
-            {/* Quick Profiles Demo Selector */}
+            {/* Quick Profiles Selector */}
             <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
-                <span>Acesso Rápido:</span>
-                <span className="text-[10px] text-emerald-600 font-semibold">1-toque</span>
+                <span>Contas Cadastradas:</span>
+                <span className="text-[10px] text-slate-500 font-medium">Clique para preencher o e-mail</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                 {(users || INITIAL_USERS).map(u => (
