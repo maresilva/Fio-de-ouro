@@ -5,7 +5,7 @@ import { INITIAL_USERS } from '../mock/initialData';
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
-  login: (email: string, role?: UserRole) => boolean;
+  login: (email: string, password?: string) => { success: boolean; error?: string };
   logout: () => void;
   switchUser: (userId: string) => void;
   hasRole: (roles: UserRole[]) => boolean;
@@ -297,22 +297,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
-  const login = (email: string, role?: UserRole): boolean => {
-    let found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!found && role) {
-      found = users.find(u => u.role === role);
+  const login = (email: string, passwordInput?: string): { success: boolean; error?: string } => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      return { success: false, error: 'Por favor, informe seu e-mail corporativo.' };
     }
+
+    if (!passwordInput || !passwordInput.trim()) {
+      return { success: false, error: 'Por favor, digite sua senha de acesso.' };
+    }
+
+    const found = users.find(u => u.email.toLowerCase() === cleanEmail);
     if (!found) {
-      found = users[0];
+      return { success: false, error: 'Usuário não encontrado. Verifique o e-mail informado.' };
     }
 
     if (found.isActive === false) {
-      alert('Este usuário está desativado pelo administrador do sistema.');
-      return false;
+      return { success: false, error: 'Este usuário está desativado pelo administrador do sistema.' };
+    }
+
+    // Validação estrita de senha
+    const expectedPassword = passwords[found.id] || '123456';
+    if (passwordInput !== expectedPassword) {
+      return { success: false, error: 'Senha incorreta. Verifique suas credenciais de acesso.' };
     }
 
     setCurrentUser(found);
-    return true;
+    return { success: true };
   };
 
   const logout = () => {

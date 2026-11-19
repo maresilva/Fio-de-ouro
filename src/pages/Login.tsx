@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, Shield, User, Lock, ArrowRight, CheckCircle2, HelpCircle } from 'lucide-react';
+import {
+  Sparkles,
+  Shield,
+  User,
+  Lock,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { INITIAL_USERS } from '../mock/initialData';
 
 export const Login: React.FC = () => {
@@ -10,25 +20,28 @@ export const Login: React.FC = () => {
 
   const [email, setEmail] = useState('jvitorscr1995@gmail.com');
   const [password, setPassword] = useState('123456');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [showRecoverModal, setShowRecoverModal] = useState(false);
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverSuccess, setRecoverSuccess] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    const ok = login(email);
-    if (ok) {
+    setErrorMessage('');
+
+    const res = login(email, password);
+    if (res.success) {
       navigate('/visao-geral');
+    } else {
+      setErrorMessage(res.error || 'Credenciais inválidas. Verifique os dados digitados.');
     }
   };
 
   const handleSelectDemoUser = (userEmail: string) => {
     setEmail(userEmail);
-    const ok = login(userEmail);
-    if (ok) {
-      navigate('/visao-geral');
-    }
+    setPassword('123456');
+    setErrorMessage('');
   };
 
   const handleRecover = (e: React.FormEvent) => {
@@ -92,6 +105,13 @@ export const Login: React.FC = () => {
               </p>
             </div>
 
+            {errorMessage && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-center space-x-2.5 animate-in fade-in duration-150">
+                <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span className="font-semibold">{errorMessage}</span>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -103,7 +123,10 @@ export const Login: React.FC = () => {
                     type="email"
                     required
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    onChange={e => {
+                      setEmail(e.target.value);
+                      if (errorMessage) setErrorMessage('');
+                    }}
                     className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900 transition-colors"
                     placeholder="jvitorscr1995@gmail.com"
                   />
@@ -126,13 +149,24 @@ export const Login: React.FC = () => {
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900 transition-colors"
+                    onChange={e => {
+                      setPassword(e.target.value);
+                      if (errorMessage) setErrorMessage('');
+                    }}
+                    className="w-full min-h-[44px] pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900 transition-colors"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 p-0.5"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
