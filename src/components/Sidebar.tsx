@@ -9,6 +9,7 @@ import {
   Archive,
   ChevronRight,
   Shield,
+  Users,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -73,6 +74,34 @@ export const Sidebar: React.FC = () => {
             </NavLink>
           );
         })}
+
+        {/* Gestão Exclusiva do Gestor */}
+        {currentUser?.role === 'gestor' && (
+          <div className="pt-3 mt-3 border-t border-slate-800 space-y-1">
+            <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 uppercase flex items-center justify-between">
+              <span>Administração</span>
+              <span className="text-[9px] bg-purple-950/80 text-purple-300 border border-purple-800/60 px-1.5 py-0.2 rounded font-mono">
+                GESTOR
+              </span>
+            </div>
+
+            <NavLink
+              to="/usuarios"
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all duration-150 ${
+                  isActive
+                    ? 'bg-purple-700 text-white shadow-md shadow-purple-950/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`
+              }
+            >
+              <div className="flex items-center space-x-3">
+                <Users className="w-4 h-4 flex-shrink-0 text-purple-300" />
+                <span className="text-sm">Usuários & Acessos</span>
+              </div>
+            </NavLink>
+          </div>
+        )}
       </div>
 
       {/* Footer link to Legacy Lottery consultation */}

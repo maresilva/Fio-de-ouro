@@ -1,0 +1,719 @@
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useApp } from '../context/AppContext';
+import { User, UserRole } from '../types';
+import { Modal } from '../components/Modal';
+import {
+  Users,
+  UserPlus,
+  Shield,
+  KeyRound,
+  Edit2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Lock,
+  Search,
+  Check,
+  Ban,
+  ArrowLeft,
+  Sparkles,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+export const UserManagement: React.FC = () => {
+  const {
+    currentUser,
+    users,
+    addUser,
+    updateUser,
+    resetUserPassword,
+    toggleUserStatus,
+  } = useAuth();
+  const { addToast } = useApp();
+
+  // Search filter
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Modals state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState<UserRole>('operador');
+  const [newBadge, setNewBadge] = useState('');
+  const [newPassword, setNewPassword] = useState('123456');
+
+  // Edit User Modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState<UserRole>('operador');
+  const [editBadge, setEditBadge] = useState('');
+  const [editIsActive, setEditIsActive] = useState(true);
+
+  // Reset Password Modal
+  const [showResetPassModal, setShowResetPassModal] = useState(false);
+  const [userForResetPass, setUserForResetPass] = useState<User | null>(null);
+  const [adminNewPass, setAdminNewPass] = useState('');
+  const [adminConfirmPass, setAdminConfirmPass] = useState('');
+
+  // Check if current user is Gestor
+  const isGestor = currentUser?.role === 'gestor';
+
+  if (!isGestor) {
+    return (
+      <div className="max-w-xl mx-auto mt-12 bg-white rounded-2xl p-8 border border-slate-200 text-center shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">Acesso Restrito ao Gestor</h2>
+        <p className="text-xs text-slate-500 mt-2">
+          Apenas usuários com perfil de Gestor Geral possuem autorização para gerenciar operadores e acessos do sistema.
+        </p>
+        <Link
+          to="/visao-geral"
+          className="mt-6 inline-flex items-center space-x-1.5 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Voltar ao Painel</span>
+        </Link>
+      </div>
+    );
+  }
+
+  // Filter users
+  const filteredUsers = users.filter(u => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.role.toLowerCase().includes(q) ||
+      (u.badge && u.badge.toLowerCase().includes(q))
+    );
+  });
+
+  // KPI counts
+  const totalUsers = users.length;
+  const countGestores = users.filter(u => u.role === 'gestor').length;
+  const countOperadores = users.filter(u => u.role === 'operador').length;
+  const countAtivos = users.filter(u => u.isActive !== false).length;
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = addUser({
+      name: newName,
+      email: newEmail,
+      role: newRole,
+      badge: newBadge,
+      initialPassword: newPassword,
+    });
+
+    if (res.success) {
+      addToast('success', 'Usuário Criado', `Usuário ${newName} cadastrado com sucesso!`);
+      setShowAddModal(false);
+      setNewName('');
+      setNewEmail('');
+      setNewRole('operador');
+      setNewBadge('');
+      setNewPassword('123456');
+    } else {
+      addToast('error', 'Erro ao Criar', res.error || 'Verifique os dados informados.');
+    }
+  };
+
+  const handleOpenEdit = (user: User) => {
+    setEditingUser(user);
+    setEditName(user.name);
+    setEditRole(user.role);
+    setEditBadge(user.badge || '');
+    setEditIsActive(user.isActive !== false);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    const res = updateUser(editingUser.id, {
+      name: editName,
+      role: editRole,
+      badge: editBadge,
+      isActive: editIsActive,
+    });
+
+    if (res.success) {
+      addToast('success', 'Usuário Atualizado', `Dados de ${editName} atualizados.`);
+      setShowEditModal(false);
+      setEditingUser(null);
+    } else {
+      addToast('error', 'Erro na Atualização', res.error || 'Não foi possível salvar.');
+    }
+  };
+
+  const handleOpenResetPass = (user: User) => {
+    setUserForResetPass(user);
+    setAdminNewPass('');
+    setAdminConfirmPass('');
+    setShowResetPassModal(true);
+  };
+
+  const handleSaveResetPass = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userForResetPass) return;
+
+    if (adminNewPass !== adminConfirmPass) {
+      addToast('error', 'Senhas Divergentes', 'A nova senha e a confirmação não conferem.');
+      return;
+    }
+
+    if (adminNewPass.length < 4) {
+      addToast('error', 'Senha Curta', 'A senha deve possuir no mínimo 4 caracteres.');
+      return;
+    }
+
+    const res = resetUserPassword(userForResetPass.id, adminNewPass);
+    if (res.success) {
+      addToast(
+        'success',
+        'Senha Redefinida',
+        `A senha de ${userForResetPass.name} foi redefinida com sucesso.`
+      );
+      setShowResetPassModal(false);
+      setUserForResetPass(null);
+    } else {
+      addToast('error', 'Erro na Redefinição', res.error || 'Não foi possível salvar.');
+    }
+  };
+
+  const handleToggleStatus = (user: User) => {
+    const actionLabel = user.isActive === false ? 'ativar' : 'desativar';
+    if (
+      window.confirm(
+        `Tem certeza que deseja ${actionLabel} o acesso de ${user.name}?`
+      )
+    ) {
+      const res = toggleUserStatus(user.id);
+      if (res.success) {
+        addToast(
+          'info',
+          'Status Alterado',
+          `O acesso de ${user.name} foi ${user.isActive === false ? 'ativado' : 'desativado'}.`
+        );
+      } else {
+        addToast('error', 'Ação Bloqueada', res.error || 'Não foi possível alterar o status.');
+      }
+    }
+  };
+
+  const getRoleBadgeClass = (role: UserRole) => {
+    switch (role) {
+      case 'gestor':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'operador':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'financeiro':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'auditor':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200';
+    }
+  };
+
+  const getRolePermissionsDescription = (role: UserRole) => {
+    switch (role) {
+      case 'gestor':
+        return 'Acesso total: Apostas, Baixas, Prêmios, Fechamentos, Correções e Gestão de Usuários';
+      case 'operador':
+        return 'Operação: Registrar apostas, dar baixa (receber), registrar prêmios e criar fechamentos';
+      case 'financeiro':
+        return 'Controladoria: Registrar apostas, acompanhar prêmios e criar fechamentos';
+      case 'auditor':
+        return 'Consulta e Auditoria: Visualização de relatórios, conferências e histórico';
+      default:
+        return 'Acesso padrão';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center space-x-1">
+              <Shield className="w-3.5 h-3.5" />
+              <span>Controle de Acessos & Permissões</span>
+            </span>
+          </div>
+          <h1 className="text-2xl font-extrabold text-slate-900 mt-1 flex items-center space-x-2">
+            <Users className="w-6 h-6 text-purple-600" />
+            <span>Gestão de Usuários do Sistema</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Cadastre quem pode mexer no sistema, defina permissões por perfil e controle senhas de acesso.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowAddModal(true)}
+          className="px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold shadow-sm shadow-purple-700/20 transition-all flex items-center space-x-1.5"
+        >
+          <UserPlus className="w-4 h-4" />
+          <span>Cadastrar Novo Usuário</span>
+        </button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
+          <span className="text-[10px] uppercase font-bold text-slate-500 block">
+            Total Cadastrados
+          </span>
+          <div className="text-2xl font-black font-mono text-slate-900 mt-1">
+            {totalUsers}
+          </div>
+          <p className="text-[10px] text-slate-400 mt-0.5">Contas no sistema</p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
+          <span className="text-[10px] uppercase font-bold text-purple-700 block">
+            Gestores Gerais
+          </span>
+          <div className="text-2xl font-black font-mono text-purple-800 mt-1">
+            {countGestores}
+          </div>
+          <p className="text-[10px] text-slate-400 mt-0.5">Acesso total administrativo</p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
+          <span className="text-[10px] uppercase font-bold text-emerald-700 block">
+            Operadores
+          </span>
+          <div className="text-2xl font-black font-mono text-emerald-800 mt-1">
+            {countOperadores}
+          </div>
+          <p className="text-[10px] text-slate-400 mt-0.5">Lançamento de apostas e caixa</p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
+          <span className="text-[10px] uppercase font-bold text-blue-700 block">
+            Usuários Ativos
+          </span>
+          <div className="text-2xl font-black font-mono text-blue-800 mt-1">
+            {countAtivos}
+          </div>
+          <p className="text-[10px] text-slate-400 mt-0.5">Com login liberado</p>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
+        <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <input
+            type="text"
+            placeholder="Buscar por nome, e-mail ou cargo..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full bg-transparent text-xs text-slate-800 focus:outline-none"
+          />
+        </div>
+
+        <div className="text-xs text-slate-500">
+          Mostrando <strong>{filteredUsers.length}</strong> de {users.length} usuários
+        </div>
+      </div>
+
+      {/* Users Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
+              <tr>
+                <th className="px-5 py-3">Usuário</th>
+                <th className="px-5 py-3">Perfil de Acesso</th>
+                <th className="px-5 py-3">Permissões</th>
+                <th className="px-5 py-3 text-center">Status</th>
+                <th className="px-5 py-3 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredUsers.map(u => {
+                const isSelf = u.id === currentUser?.id;
+                const isActive = u.isActive !== false;
+
+                return (
+                  <tr key={u.id} className="hover:bg-slate-50/70">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase flex-shrink-0">
+                          {u.name.substring(0, 2)}
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-slate-900 flex items-center space-x-1.5">
+                            <span>{u.name}</span>
+                            {isSelf && (
+                              <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-normal">
+                                Você
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
+                          {u.badge && (
+                            <span className="text-[10px] text-slate-500 block mt-0.5">
+                              {u.badge}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${getRoleBadgeClass(
+                          u.role
+                        )}`}
+                      >
+                        {u.role}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-3.5 text-slate-600 max-w-xs text-[11px]">
+                      {getRolePermissionsDescription(u.role)}
+                    </td>
+
+                    <td className="px-5 py-3.5 text-center">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase inline-flex items-center space-x-1 ${
+                          isActive
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-red-100 text-red-800 font-extrabold'
+                        }`}
+                      >
+                        {isActive ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Ativo</span>
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="w-3 h-3" />
+                            <span>Inativo</span>
+                          </>
+                        )}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-3.5 text-center">
+                      <div className="flex items-center justify-center space-x-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(u)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold flex items-center space-x-1"
+                          title="Editar Usuário"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Editar</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenResetPass(u)}
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-bold flex items-center space-x-1"
+                          title="Redefinir Senha do Usuário"
+                        >
+                          <KeyRound className="w-3 h-3 text-amber-700" />
+                          <span>Senha</span>
+                        </button>
+
+                        {!isSelf && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(u)}
+                            className={`px-2 py-1 rounded-lg text-[11px] font-bold ${
+                              isActive
+                                ? 'text-red-700 hover:bg-red-50'
+                                : 'text-emerald-700 hover:bg-emerald-50'
+                            }`}
+                            title={isActive ? 'Desativar acesso' : 'Reativar acesso'}
+                          >
+                            {isActive ? 'Desativar' : 'Ativar'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal: Cadastrar Novo Usuário */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Cadastrar Novo Usuário / Operador"
+        subtitle="Defina o nome, e-mail de acesso, nível de permissão e senha inicial"
+      >
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Nome Completo *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Ex: Lucas Ferreira"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              E-mail de Acesso (Login) *
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="lucas@loterica.com.br"
+              value={newEmail}
+              onChange={e => setNewEmail(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Perfil de Acesso / Nível de Permissão *
+            </label>
+            <select
+              required
+              value={newRole}
+              onChange={e => setNewRole(e.target.value as UserRole)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+            >
+              <option value="operador">Operador (Lança apostas, baixas, prêmios e fechamentos)</option>
+              <option value="gestor">Gestor Geral (Acesso total, correções de fechamento e usuários)</option>
+              <option value="financeiro">Financeiro (Operações e relatórios financeiros)</option>
+              <option value="auditor">Auditor (Somente visualização e conferências)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Cargo / Descrição (opcional)
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Operador Balcão Manhã"
+              value={newBadge}
+              onChange={e => setNewBadge(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Senha Inicial de Acesso * (Padrão: 123456)
+            </label>
+            <input
+              type="text"
+              required
+              minLength={4}
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono"
+            />
+            <span className="text-[10px] text-slate-400 mt-0.5 block">
+              O usuário poderá alterar a senha depois diretamente pelo painel.
+            </span>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl shadow-sm"
+            >
+              Cadastrar Usuário
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Editar Usuário */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingUser(null);
+        }}
+        title="Editar Dados do Usuário"
+        subtitle={editingUser ? `Atualizando ${editingUser.name} (${editingUser.email})` : ''}
+      >
+        {editingUser && (
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Nome Completo *
+              </label>
+              <input
+                type="text"
+                required
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Perfil de Acesso *
+              </label>
+              <select
+                required
+                value={editRole}
+                onChange={e => setEditRole(e.target.value as UserRole)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+              >
+                <option value="operador">Operador (Apostas, baixas, prêmios e fechamentos)</option>
+                <option value="gestor">Gestor Geral (Acesso total)</option>
+                <option value="financeiro">Financeiro</option>
+                <option value="auditor">Auditor (Somente visualização)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Cargo / Descrição
+              </label>
+              <input
+                type="text"
+                value={editBadge}
+                onChange={e => setEditBadge(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </div>
+
+            {editingUser.id !== currentUser?.id && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Status de Acesso
+                </label>
+                <select
+                  value={editIsActive ? 'ativo' : 'inativo'}
+                  onChange={e => setEditIsActive(e.target.value === 'ativo')}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                >
+                  <option value="ativo">Ativo (Login permitido)</option>
+                  <option value="inativo">Inativo (Acesso bloqueado)</option>
+                </select>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingUser(null);
+                }}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-sm"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Modal: Redefinir Senha do Usuário */}
+      <Modal
+        isOpen={showResetPassModal}
+        onClose={() => {
+          setShowResetPassModal(false);
+          setUserForResetPass(null);
+        }}
+        title="Redefinir Senha do Usuário"
+        subtitle={userForResetPass ? `Definir nova senha para ${userForResetPass.name}` : ''}
+      >
+        {userForResetPass && (
+          <form onSubmit={handleSaveResetPass} className="space-y-4">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950">
+              Como <strong>Gestor</strong>, você pode definir uma nova senha para este operador caso ele tenha esquecido ou precise de redefinição de acesso.
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Nova Senha *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={4}
+                value={adminNewPass}
+                onChange={e => setAdminNewPass(e.target.value)}
+                placeholder="Mínimo 4 caracteres"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Confirmar Nova Senha *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={4}
+                value={adminConfirmPass}
+                onChange={e => setAdminConfirmPass(e.target.value)}
+                placeholder="Repita a nova senha"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetPassModal(false);
+                  setUserForResetPass(null);
+                }}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm flex items-center space-x-1"
+              >
+                <KeyRound className="w-4 h-4" />
+                <span>Salvar Nova Senha</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+    </div>
+  );
+};

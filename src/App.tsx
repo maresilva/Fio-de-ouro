@@ -9,6 +9,7 @@ import { Login } from './pages/Login';
 import { FootballOverview } from './pages/FootballOverview';
 import { FootballBets } from './pages/FootballBets';
 import { FootballClosings } from './pages/FootballClosings';
+import { UserManagement } from './pages/UserManagement';
 import { LegacyLottery } from './pages/LegacyLottery';
 
 // Legacy Lottery Pages (Preserved for Consultation and Audit)
@@ -56,6 +57,9 @@ export const App: React.FC = () => {
               <Route path="/dashboard" element={<Navigate to="/visao-geral" replace />} />
               <Route path="/apostas" element={<FootballBets />} />
               <Route path="/fechamentos" element={<FootballClosings />} />
+
+              {/* Gestão de Usuários e Acessos (Exclusivo Gestor) */}
+              <Route path="/usuarios" element={<UserManagement />} />
 
               {/* Consulta Histórica da Lotérica (Preservado e Isolado) */}
               <Route path="/legado-loterica" element={<LegacyLottery />} />

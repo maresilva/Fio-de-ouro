@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Modal } from './Modal';
 import {
   RotateCcw,
   LogOut,
@@ -10,14 +11,23 @@ import {
   CalendarCheck,
   LayoutDashboard,
   User,
+  Users,
   Shield,
+  KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentUser, users, switchUser, logout } = useAuth();
-  const { resetAllData } = useApp();
+  const { currentUser, users, switchUser, logout, changePassword } = useAuth();
+  const { resetAllData, addToast } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Modal Alterar Senha
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     switchUser(e.target.value);
@@ -26,6 +36,31 @@ export const Navbar: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const handleChangePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      addToast('error', 'Senhas Não Conferem', 'A nova senha e a confirmação devem ser idênticas.');
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      addToast('error', 'Senha Curta', 'A nova senha deve ter pelo menos 4 caracteres.');
+      return;
+    }
+
+    const res = changePassword(currentPassword, newPassword);
+    if (res.success) {
+      addToast('success', 'Senha Atualizada', 'Sua senha de acesso foi alterada com sucesso.');
+      setShowPasswordModal(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      addToast('error', 'Erro ao Alterar Senha', res.error || 'Verifique a senha atual informada.');
+    }
   };
 
   const getRoleBadgeColor = (role?: string) => {
@@ -66,7 +101,7 @@ export const Navbar: React.FC = () => {
           </Link>
         </div>
 
-        {/* Center shortcuts (visible on medium+ screens) */}
+        {/* Center shortcuts */}
         <nav className="hidden md:flex items-center space-x-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
           <Link
             to="/visao-geral"
@@ -103,11 +138,25 @@ export const Navbar: React.FC = () => {
             <CalendarCheck className="w-3.5 h-3.5" />
             <span>Fechamentos</span>
           </Link>
+
+          {currentUser?.role === 'gestor' && (
+            <Link
+              to="/usuarios"
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                location.pathname === '/usuarios'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-purple-700 hover:bg-purple-50'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Usuários</span>
+            </Link>
+          )}
         </nav>
 
         {/* Right side controls */}
         <div className="flex items-center space-x-3">
-          {/* Role switcher for testing & auditing */}
+          {/* Role switcher */}
           <div className="hidden sm:flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
             <span className="text-[10px] uppercase font-bold text-slate-400">Perfil:</span>
             <select
@@ -136,7 +185,7 @@ export const Navbar: React.FC = () => {
             <RotateCcw className="w-4 h-4" />
           </button>
 
-          {/* User profile info & Logout */}
+          {/* User profile info & Password / Logout */}
           <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
             <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
               {currentUser?.name.substring(0, 2)}
@@ -155,16 +204,122 @@ export const Navbar: React.FC = () => {
               </span>
             </div>
 
+            {/* Manage Users Button (Gestor only) */}
+            {currentUser?.role === 'gestor' && (
+              <Link
+                to="/usuarios"
+                title="Gerenciar Usuários e Operadores"
+                className={`p-1.5 rounded-lg transition-colors ml-1 ${
+                  location.pathname === '/usuarios'
+                    ? 'text-purple-700 bg-purple-100'
+                    : 'text-purple-600 hover:text-purple-800 hover:bg-purple-50'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+              </Link>
+            )}
+
+            {/* Change Password Button */}
+            <button
+              type="button"
+              onClick={() => setShowPasswordModal(true)}
+              title="Alterar Minha Senha"
+              className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors ml-1"
+            >
+              <KeyRound className="w-4 h-4" />
+            </button>
+
+            {/* Logout Button */}
             <button
               onClick={handleLogout}
               title="Encerrar Sessão"
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-1"
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal Alterar Minha Senha */}
+      <Modal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        title="Alterar Minha Senha"
+        subtitle={`Atualização de credencial de acesso para ${currentUser?.name}`}
+      >
+        <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+            <div>
+              <strong>Usuário:</strong> {currentUser?.name} ({currentUser?.email})
+            </div>
+            <div className="text-[11px] text-slate-500">
+              * Senha padrão inicial para contas de demonstração: <strong>123456</strong>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Senha Atual *
+            </label>
+            <input
+              type="password"
+              required
+              value={currentPassword}
+              onChange={e => setCurrentPassword(e.target.value)}
+              placeholder="Digite sua senha atual"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Nova Senha *
+            </label>
+            <input
+              type="password"
+              required
+              minLength={4}
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Digite a nova senha (mínimo 4 caracteres)"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Confirmar Nova Senha *
+            </label>
+            <input
+              type="password"
+              required
+              minLength={4}
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Repita a nova senha exatamente igual"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowPasswordModal(false)}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm flex items-center space-x-1.5"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Salvar Nova Senha</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
     </header>
   );
 };

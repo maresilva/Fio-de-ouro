@@ -7,6 +7,8 @@ export interface User {
   role: UserRole;
   avatar?: string;
   badge?: string;
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 export interface Client {

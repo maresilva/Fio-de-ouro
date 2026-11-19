@@ -5,7 +5,7 @@ import { Sparkles, Shield, User, Lock, ArrowRight, CheckCircle2, HelpCircle } fr
 import { INITIAL_USERS } from '../mock/initialData';
 
 export const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { login, users } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('gestor@loterica.com.br');
@@ -17,14 +17,18 @@ export const Login: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    login(email);
-    navigate('/dashboard');
+    const ok = login(email);
+    if (ok) {
+      navigate('/visao-geral');
+    }
   };
 
   const handleSelectDemoUser = (userEmail: string) => {
     setEmail(userEmail);
-    login(userEmail);
-    navigate('/dashboard');
+    const ok = login(userEmail);
+    if (ok) {
+      navigate('/visao-geral');
+    }
   };
 
   const handleRecover = (e: React.FormEvent) => {
@@ -147,16 +151,26 @@ export const Login: React.FC = () => {
                 <span>Acesso Rápido por Perfil (Demo):</span>
                 <span className="text-[10px] text-emerald-600 font-semibold">1-clique</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                {INITIAL_USERS.slice(0, 4).map(u => (
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {(users || INITIAL_USERS).map(u => (
                   <button
                     key={u.id}
                     type="button"
+                    disabled={u.isActive === false}
                     onClick={() => handleSelectDemoUser(u.email)}
-                    className="text-left p-2.5 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all text-xs"
+                    className={`text-left p-2.5 rounded-xl border transition-all text-xs ${
+                      u.isActive === false
+                        ? 'border-slate-200 bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed'
+                        : 'border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-slate-800'
+                    }`}
                   >
-                    <div className="font-bold text-slate-800 truncate">{u.name}</div>
-                    <div className="text-[10px] uppercase font-bold text-emerald-700">{u.role}</div>
+                    <div className="font-bold truncate">{u.name}</div>
+                    <div className="text-[10px] uppercase font-bold text-emerald-700 flex items-center justify-between">
+                      <span>{u.role}</span>
+                      {u.isActive === false && (
+                        <span className="text-[9px] text-red-500 font-semibold">Inativo</span>
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
