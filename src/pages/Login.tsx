@@ -123,19 +123,17 @@ export const Login: React.FC = () => {
 
             {/* Aviso de Configuração de Ambiente caso falte VITE_SUPABASE_* */}
             {!isConfigured && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1">
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 space-y-1.5">
                 <div className="flex items-center space-x-1.5 font-bold text-amber-900">
                   <Settings className="w-4 h-4 text-amber-600" />
-                  <span>Configuração de Segurança Necessária</span>
+                  <span>Modo de Transição Local Ativo</span>
                 </div>
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Para autenticação segura com o banco de dados dedicado, defina as variáveis no painel da Vercel ou no arquivo <code className="bg-amber-100 px-1 py-0.5 rounded font-mono">.env</code>:
+                  As variáveis do Supabase ainda não foram adicionadas na Vercel. O login de gestor (<code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-semibold">jvitorscr1995@gmail.com</code>) está liberado em contingência local para você não perder o acesso ao sistema.
                 </p>
-                <ul className="text-[10px] font-mono list-disc list-inside text-amber-900 font-semibold pt-0.5">
-                  {missingConfigKeys.map(k => (
-                    <li key={k}>{k}</li>
-                  ))}
-                </ul>
+                <div className="pt-0.5 text-[10px] text-amber-700">
+                  Para conectar o banco definitivo, defina na Vercel: <span className="font-mono font-bold">VITE_SUPABASE_URL</span> e <span className="font-mono font-bold">VITE_SUPABASE_ANON_KEY</span>.
+                </div>
               </div>
             )}
 
