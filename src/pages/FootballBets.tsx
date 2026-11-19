@@ -288,7 +288,7 @@ export const FootballBets: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5">
           <button
             type="button"
             onClick={() => {
@@ -296,7 +296,7 @@ export const FootballBets: React.FC = () => {
               setBetReceivedAt(getOperationalToday());
               setShowBetModal(true);
             }}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 transition-all flex items-center space-x-1.5"
+            className="min-h-[44px] px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 transition-all flex items-center justify-center space-x-1.5 active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Registrar Aposta</span>
@@ -308,7 +308,7 @@ export const FootballBets: React.FC = () => {
               setPrizePaidAt(getOperationalToday());
               setShowPrizeModal(true);
             }}
-            className="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5"
+            className="min-h-[44px] px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 active:scale-95"
           >
             <Trophy className="w-4 h-4 text-amber-300" />
             <span>Registrar Prêmio</span>
@@ -575,7 +575,7 @@ export const FootballBets: React.FC = () => {
                 </table>
               </div>
 
-              {/* Mobile Cards View */}
+              {/* Mobile Cards View (Apostas) */}
               <div className="sm:hidden p-3 space-y-3">
                 {filteredBets.map(bet => {
                   const isPaid = bet.status === 'pago';
@@ -584,51 +584,57 @@ export const FootballBets: React.FC = () => {
                   return (
                     <div
                       key={bet.id}
-                      className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2"
+                      className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 space-y-2.5 shadow-xs"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between">
                         <div>
-                          <span className="font-extrabold text-xs text-slate-900 block">
+                          <span className="font-extrabold text-sm text-slate-900 block">
                             {bet.clientName}
                           </span>
                           {clientObj?.referenceCode && (
-                            <span className="text-[9px] text-slate-500">
+                            <span className="text-[10px] text-slate-500 font-medium">
                               {clientObj.referenceCode}
                             </span>
                           )}
                         </div>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase ${
                             isPaid
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
+                              : 'bg-amber-100 text-amber-800 font-black'
                           }`}
                         >
                           {isPaid ? 'Pago' : 'Não pago'}
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 font-mono">
+                      <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/60 font-mono">
                         <span className="text-slate-500">Data: {formatDateBR(bet.date)}</span>
-                        <span className="font-bold text-slate-900 text-sm">
+                        <span className="font-black text-slate-900 text-base">
                           {formatBRL(bet.amount)}
                         </span>
                       </div>
 
-                      {isPaid && bet.receivedAt && (
-                        <div className="text-[11px] text-slate-500">
-                          Recebido em: <strong>{formatDateBR(bet.receivedAt)}</strong> (
-                          {bet.receivedBy})
-                        </div>
+                      {bet.notes && (
+                        <p className="text-[11px] text-slate-500 bg-white p-2 rounded-lg border border-slate-100">
+                          {bet.notes}
+                        </p>
                       )}
+
+                      {isPaid && bet.receivedAt ? (
+                        <div className="text-[11px] text-slate-500 bg-emerald-50/60 p-2 rounded-lg border border-emerald-100 flex items-center justify-between">
+                          <span>Recebido em: <strong>{formatDateBR(bet.receivedAt)}</strong></span>
+                          {bet.receivedBy && <span className="text-[10px] text-slate-400">Por: {bet.receivedBy}</span>}
+                        </div>
+                      ) : null}
 
                       {!isPaid && (
                         <button
                           type="button"
                           onClick={() => handleOpenMarkPaid(bet)}
-                          className="w-full mt-2 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1"
+                          className="w-full min-h-[44px] mt-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition-all"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <CheckCircle2 className="w-4 h-4" />
                           <span>Marcar como pago</span>
                         </button>
                       )}
@@ -654,48 +660,98 @@ export const FootballBets: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
-                  <tr>
-                    <th className="px-5 py-3">Data do Pagamento</th>
-                    <th className="px-5 py-3">Cliente</th>
-                    <th className="px-5 py-3 text-right">Valor Efetivamente Pago</th>
-                    <th className="px-5 py-3">Aposta Vinculada</th>
-                    <th className="px-5 py-3">Registrado Por</th>
-                    <th className="px-5 py-3">Observações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredPrizes.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50/70">
-                      <td className="px-5 py-3.5 font-bold text-slate-900">
-                        {formatDateBR(p.paidAt)}
-                      </td>
-                      <td className="px-5 py-3.5 font-extrabold text-slate-900">
-                        {p.clientName}
-                      </td>
-                      <td className="px-5 py-3.5 text-right font-mono font-bold text-teal-800 text-sm">
-                        {formatBRL(p.amount)}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-600 font-mono text-[11px]">
-                        {p.betId ? (
-                          <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">
-                            {p.betId}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 italic">Não vinculada</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-700">{p.registeredBy}</td>
-                      <td className="px-5 py-3.5 text-slate-500 text-[11px] max-w-xs truncate">
-                        {p.notes || '-'}
-                      </td>
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
+                    <tr>
+                      <th className="px-5 py-3">Data do Pagamento</th>
+                      <th className="px-5 py-3">Cliente</th>
+                      <th className="px-5 py-3 text-right">Valor Efetivamente Pago</th>
+                      <th className="px-5 py-3">Aposta Vinculada</th>
+                      <th className="px-5 py-3">Registrado Por</th>
+                      <th className="px-5 py-3">Observações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredPrizes.map(p => (
+                      <tr key={p.id} className="hover:bg-slate-50/70">
+                        <td className="px-5 py-3.5 font-bold text-slate-900">
+                          {formatDateBR(p.paidAt)}
+                        </td>
+                        <td className="px-5 py-3.5 font-extrabold text-slate-900">
+                          {p.clientName}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-mono font-bold text-teal-800 text-sm">
+                          {formatBRL(p.amount)}
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-600 font-mono text-[11px]">
+                          {p.betId ? (
+                            <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">
+                              {p.betId}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">Não vinculada</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-700">{p.registeredBy}</td>
+                        <td className="px-5 py-3.5 text-slate-500 text-[11px] max-w-xs truncate">
+                          {p.notes || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards View (Prêmios) */}
+              <div className="sm:hidden p-3 space-y-3">
+                {filteredPrizes.map(p => (
+                  <div
+                    key={p.id}
+                    className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 space-y-2 shadow-xs"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="font-extrabold text-sm text-slate-900 block">
+                          {p.clientName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          Pago em: {formatDateBR(p.paidAt)}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] font-bold uppercase text-teal-700 block">
+                          Valor Pago
+                        </span>
+                        <span className="text-base font-black font-mono text-teal-800">
+                          {formatBRL(p.amount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>
+                        Aposta:{' '}
+                        {p.betId ? (
+                          <strong className="text-slate-700">{p.betId}</strong>
+                        ) : (
+                          <span className="italic text-slate-400">Não vinculada</span>
+                        )}
+                      </span>
+                      <span>Por: <strong className="text-slate-700">{p.registeredBy}</strong></span>
+                    </div>
+
+                    {p.notes && (
+                      <p className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-100">
+                        {p.notes}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}

@@ -39,7 +39,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-60 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 min-h-[calc(100vh-4rem)] border-r border-slate-800 justify-between">
+    <aside className="hidden md:flex w-60 bg-slate-900 text-slate-300 flex-col flex-shrink-0 min-h-[calc(100vh-4rem)] border-r border-slate-800 justify-between">
       <div className="p-4 space-y-2">
         <div className="px-3 py-2 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
           Menu Principal
@@ -76,7 +76,8 @@ export const Sidebar: React.FC = () => {
         })}
 
         {/* Gestão Exclusiva do Gestor */}
-        {currentUser?.role === 'gestor' && (
+        {(currentUser?.role === 'gestor' ||
+          currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com') && (
           <div className="pt-3 mt-3 border-t border-slate-800 space-y-1">
             <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 uppercase flex items-center justify-between">
               <span>Administração</span>

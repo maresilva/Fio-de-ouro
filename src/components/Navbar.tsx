@@ -139,7 +139,8 @@ export const Navbar: React.FC = () => {
             <span>Fechamentos</span>
           </Link>
 
-          {currentUser?.role === 'gestor' && (
+          {(currentUser?.role === 'gestor' ||
+            currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com') && (
             <Link
               to="/usuarios"
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
@@ -180,13 +181,13 @@ export const Navbar: React.FC = () => {
               }
             }}
             title="Restaurar Banco Demonstrativo"
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
 
           {/* User profile info & Password / Logout */}
-          <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 pl-2 border-l border-slate-200">
             <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
               {currentUser?.name.substring(0, 2)}
             </div>
@@ -205,11 +206,12 @@ export const Navbar: React.FC = () => {
             </div>
 
             {/* Manage Users Button (Gestor only) */}
-            {currentUser?.role === 'gestor' && (
+            {(currentUser?.role === 'gestor' ||
+              currentUser?.email.toLowerCase() === 'jvitorscr1995@gmail.com') && (
               <Link
                 to="/usuarios"
                 title="Gerenciar Usuários e Operadores"
-                className={`p-1.5 rounded-lg transition-colors ml-1 ${
+                className={`p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition-colors ${
                   location.pathname === '/usuarios'
                     ? 'text-purple-700 bg-purple-100'
                     : 'text-purple-600 hover:text-purple-800 hover:bg-purple-50'
@@ -224,7 +226,7 @@ export const Navbar: React.FC = () => {
               type="button"
               onClick={() => setShowPasswordModal(true)}
               title="Alterar Minha Senha"
-              className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors ml-1"
+              className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors"
             >
               <KeyRound className="w-4 h-4" />
             </button>
@@ -233,7 +235,7 @@ export const Navbar: React.FC = () => {
             <button
               onClick={handleLogout}
               title="Encerrar Sessão"
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>

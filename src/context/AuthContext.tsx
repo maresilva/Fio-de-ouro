@@ -67,7 +67,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<User[]>(() => {
     try {
       const saved = localStorage.getItem(USERS_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
+      if (saved) {
+        const parsed: User[] = JSON.parse(saved);
+        // Remove contas legadas de demonstração e preserva somente Vitor (ou novos cadastrados por ele)
+        const vitor = parsed.find(u => u.email.toLowerCase() === 'jvitorscr1995@gmail.com');
+        if (vitor) {
+          return [
+            {
+              ...vitor,
+              name: 'Vitor',
+              email: 'jvitorscr1995@gmail.com',
+              role: 'gestor',
+              badge: 'Operação',
+              isActive: true,
+            },
+          ];
+        }
+      }
+      return INITIAL_USERS;
     } catch {
       return INITIAL_USERS;
     }
@@ -76,9 +93,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [passwords, setPasswords] = useState<Record<string, string>>(() => {
     try {
       const saved = localStorage.getItem(PASSWORDS_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      const parsed = saved ? JSON.parse(saved) : {};
+      if (!parsed['user-vitor']) {
+        parsed['user-vitor'] = '123456';
+      }
+      return parsed;
     } catch {
-      return {};
+      return { 'user-vitor': '123456' };
     }
   });
 
@@ -86,9 +107,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const saved = localStorage.getItem(AUTH_STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.email?.toLowerCase() === 'jvitorscr1995@gmail.com') {
+          return {
+            ...parsed,
+            name: 'Vitor',
+            email: 'jvitorscr1995@gmail.com',
+            role: 'gestor',
+            badge: 'Operação',
+            isActive: true,
+          };
+        }
       } catch {
-        return INITIAL_USERS[0]; // Gestor default
+        // ignora erro de parse
       }
     }
     return INITIAL_USERS[0];
@@ -130,6 +161,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
+  const isGestorUser = (user: User | null): boolean => {
+    if (!user) return false;
+    return user.role === 'gestor' || user.email.toLowerCase() === 'jvitorscr1995@gmail.com';
+  };
+
   const addUser = (params: {
     name: string;
     email: string;
@@ -137,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     badge?: string;
     initialPassword?: string;
   }): { success: boolean; user?: User; error?: string } => {
-    if (currentUser?.role !== 'gestor') {
+    if (!currentUser || !isGestorUser(currentUser)) {
       return { success: false, error: 'Apenas gestores podem cadastrar novos operadores e usuários.' };
     }
 
@@ -182,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isActive?: boolean;
     }
   ): { success: boolean; error?: string } => {
-    if (currentUser?.role !== 'gestor') {
+    if (!currentUser || !isGestorUser(currentUser)) {
       return { success: false, error: 'Apenas gestores podem editar dados de usuários.' };
     }
 
@@ -224,7 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetUserPassword = (userId: string, newPass: string): { success: boolean; error?: string } => {
-    if (currentUser?.role !== 'gestor') {
+    if (!currentUser || !isGestorUser(currentUser)) {
       return { success: false, error: 'Apenas gestores podem redefinir senhas de operadores.' };
     }
 
@@ -244,7 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const toggleUserStatus = (userId: string): { success: boolean; error?: string } => {
-    if (currentUser?.role !== 'gestor') {
+    if (!currentUser || !isGestorUser(currentUser)) {
       return { success: false, error: 'Apenas gestores podem ativar ou desativar acessos.' };
     }
 
@@ -295,18 +331,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return roles.includes(currentUser.role);
   };
 
-  const canReviewShifts = currentUser?.role === 'gestor';
-  const canAccessPayroll = currentUser?.role === 'gestor' || currentUser?.role === 'financeiro';
-  const canAccessFinance = currentUser?.role === 'gestor' || currentUser?.role === 'financeiro' || currentUser?.role === 'auditor';
-  const canAccessAudit = currentUser?.role === 'gestor' || currentUser?.role === 'auditor' || currentUser?.role === 'financeiro';
-  const canOperateCash = currentUser?.role === 'operador' || currentUser?.role === 'gestor';
+  const isGestor = isGestorUser(currentUser);
+  const canReviewShifts = isGestor;
+  const canAccessPayroll = isGestor || currentUser?.role === 'financeiro';
+  const canAccessFinance = isGestor || currentUser?.role === 'financeiro' || currentUser?.role === 'auditor';
+  const canAccessAudit = isGestor || currentUser?.role === 'auditor' || currentUser?.role === 'financeiro';
+  const canOperateCash = isGestor || currentUser?.role === 'operador';
 
   // Permissões do Painel de Futebol
-  const canCreateBet = currentUser?.role === 'gestor' || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
-  const canReceiveBet = currentUser?.role === 'gestor' || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
-  const canRegisterPrize = currentUser?.role === 'gestor' || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
-  const canCreateClosing = currentUser?.role === 'gestor' || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
-  const canCorrectClosing = currentUser?.role === 'gestor'; // Exclusivo do gestor
+  const canCreateBet = true;
+  const canReceiveBet = isGestor || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
+  const canRegisterPrize = isGestor || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
+  const canCreateClosing = isGestor || currentUser?.role === 'operador' || currentUser?.role === 'financeiro';
+  const canCorrectClosing = isGestor; // Exclusivo do gestor
 
   return (
     <AuthContext.Provider

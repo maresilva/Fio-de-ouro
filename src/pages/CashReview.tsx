@@ -106,7 +106,7 @@ export const CashReview: React.FC = () => {
           Apenas usuários com perfil de <strong>Gestor</strong> possuem alçada para homologar, ajustar e consolidar fechamentos de caixa.
         </p>
         <span className="text-[11px] text-slate-500">
-          Dica: Você pode alternar o usuário no topo da tela para <strong>Carlos Alberto Silva (Gestor)</strong> para testar esta funcionalidade.
+          Dica: Usuário ativo: <strong>Vitor (Operação)</strong>.
         </span>
       </div>
     );

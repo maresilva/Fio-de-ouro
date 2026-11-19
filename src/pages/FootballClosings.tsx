@@ -218,7 +218,7 @@ export const FootballClosings: React.FC = () => {
             setClosingDate(getOperationalToday());
             setShowNewModal(true);
           }}
-          className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center space-x-1.5"
+          className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center space-x-1.5 active:scale-95"
         >
           <Plus className="w-4 h-4 text-emerald-400" />
           <span>Novo Fechamento</span>
@@ -274,51 +274,57 @@ export const FootballClosings: React.FC = () => {
 
       {/* Filter Bar */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center space-x-1.5 text-xs">
-            <span className="font-bold text-slate-600">De:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1.5 text-xs text-slate-700 font-bold">
+            <Calendar className="w-4 h-4 text-emerald-600" />
+            <span>Período:</span>
+          </div>
+          <div className="flex items-center space-x-1.5 flex-1 sm:flex-none">
+            <span className="text-xs text-slate-500 font-medium">De:</span>
             <input
               type="date"
               value={filterStartDate}
               onChange={e => setFilterStartDate(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs"
+              className="text-base sm:text-xs min-h-[42px] w-full sm:w-auto px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium"
             />
-            <span className="font-bold text-slate-600">Até:</span>
+          </div>
+          <div className="flex items-center space-x-1.5 flex-1 sm:flex-none">
+            <span className="text-xs text-slate-500 font-medium">Até:</span>
             <input
               type="date"
               value={filterEndDate}
               onChange={e => setFilterEndDate(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs"
+              className="text-base sm:text-xs min-h-[42px] w-full sm:w-auto px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium"
             />
           </div>
         </div>
 
-        <div className="flex items-center space-x-1.5">
+        <div className="grid grid-cols-4 sm:flex items-center gap-1 sm:space-x-1.5">
           <button
             type="button"
             onClick={handleShortcutToday}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg"
+            className="min-h-[40px] px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl active:scale-95 text-center"
           >
             Hoje
           </button>
           <button
             type="button"
             onClick={handleShortcutYesterday}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg"
+            className="min-h-[40px] px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl active:scale-95 text-center"
           >
             Ontem
           </button>
           <button
             type="button"
             onClick={handleShortcutMonth}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg"
+            className="min-h-[40px] px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl active:scale-95 text-center"
           >
             Este mês
           </button>
           <button
             type="button"
             onClick={handleShortcutAll}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg"
+            className="min-h-[40px] px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl active:scale-95 text-center"
           >
             Todos
           </button>
@@ -434,21 +440,21 @@ export const FootballClosings: React.FC = () => {
                 return (
                   <div
                     key={c.id}
-                    className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2"
+                    className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 space-y-2.5 shadow-xs"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-1.5">
-                        <span className="font-extrabold text-xs text-slate-900">
+                        <span className="font-extrabold text-sm text-slate-900">
                           {formatDateBR(c.date)}
                         </span>
                         {hasCorrection && (
-                          <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded-md">
                             Corrigido
                           </span>
                         )}
                       </div>
                       <span
-                        className={`text-xs font-black font-mono ${
+                        className={`text-sm font-black font-mono ${
                           c.total > 0
                             ? 'text-emerald-700'
                             : c.total < 0
@@ -456,44 +462,47 @@ export const FootballClosings: React.FC = () => {
                             : 'text-slate-700'
                         }`}
                       >
+                        {c.total > 0 ? '+' : ''}
                         {formatBRL(c.total)}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1 border-t border-slate-200/60">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-sans">Apurado:</span>
-                        {formatBRL(c.apurado)}
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-slate-200/60">
+                      <div className="bg-white p-2 rounded-xl border border-slate-100">
+                        <span className="text-[10px] text-slate-400 block font-sans font-medium">Apurado:</span>
+                        <strong className="text-slate-800 text-xs">{formatBRL(c.apurado)}</strong>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block font-sans">Descarrego:</span>
-                        {formatBRL(c.descarrego)}
+                      <div className="bg-white p-2 rounded-xl border border-slate-100 text-right">
+                        <span className="text-[10px] text-slate-400 block font-sans font-medium">Descarrego:</span>
+                        <strong className="text-slate-700 text-xs">{formatBRL(c.descarrego)}</strong>
                       </div>
                     </div>
 
-                    <div className="text-[11px] text-blue-800 font-mono flex items-center justify-between pt-1">
-                      <span className="text-slate-500 font-sans">Recebimentos Conf.:</span>
+                    <div className="text-[11px] bg-blue-50/80 border border-blue-100 p-2 rounded-xl text-blue-900 font-mono flex items-center justify-between">
+                      <span className="text-blue-600 font-sans font-semibold">Recebimentos no dia:</span>
                       <strong>{formatBRL(conference)}</strong>
                     </div>
 
-                    <div className="pt-2 flex items-center space-x-2">
+                    <div className="pt-1 flex items-center space-x-2">
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedClosing(c);
                           setShowDetailsModal(true);
                         }}
-                        className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold text-center"
+                        className="flex-1 min-h-[44px] bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold text-center flex items-center justify-center space-x-1.5 active:scale-95 shadow-xs transition-colors"
                       >
-                        Consultar
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Consultar</span>
                       </button>
                       {canCorrectClosing && (
                         <button
                           type="button"
                           onClick={() => handleOpenCorrect(c)}
-                          className="flex-1 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold text-center"
+                          className="flex-1 min-h-[44px] bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl text-xs font-bold text-center flex items-center justify-center space-x-1.5 active:scale-95 shadow-xs transition-colors"
                         >
-                          Corrigir
+                          <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                          <span>Corrigir</span>
                         </button>
                       )}
                     </div>

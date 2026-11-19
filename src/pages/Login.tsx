@@ -8,7 +8,7 @@ export const Login: React.FC = () => {
   const { login, users } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('gestor@loterica.com.br');
+  const [email, setEmail] = useState('jvitorscr1995@gmail.com');
   const [password, setPassword] = useState('123456');
   const [showRecoverModal, setShowRecoverModal] = useState(false);
   const [recoverEmail, setRecoverEmail] = useState('');
@@ -43,69 +43,69 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 flex items-center justify-center p-3 sm:p-4">
       <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-700/30">
         {/* Left Side: Brand & Visual */}
-        <div className="p-8 md:p-10 bg-gradient-to-tr from-emerald-800 via-emerald-700 to-teal-800 text-white flex flex-col justify-between relative overflow-hidden">
+        <div className="p-6 sm:p-8 md:p-10 bg-gradient-to-tr from-emerald-800 via-emerald-700 to-teal-800 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
 
           <div>
-            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mb-6 shadow-inner">
-              <Sparkles className="w-8 h-8 text-amber-300" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mb-4 sm:mb-6 shadow-inner">
+              <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-amber-300" />
             </div>
-            <div className="inline-block bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold tracking-wider text-emerald-100 uppercase mb-3">
-              Sistema de Gestão Lotérica
+            <div className="inline-block bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold tracking-wider text-emerald-100 uppercase mb-2 sm:mb-3">
+              Sistema de Gestão & Apostas
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-              Lotérica <br />
-              <span className="text-amber-300 font-black">Fio de Ouro</span>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+              Painel Operacional <br />
+              <span className="text-amber-300 font-black">Futebol & Loterias</span>
             </h1>
-            <p className="mt-4 text-emerald-100/90 text-sm leading-relaxed">
-              ERP interno completo para controle de caixas e turnos, tesouraria, cofre, prêmios, financeiro e auditoria contábil.
+            <p className="mt-2 sm:mt-4 text-emerald-100/90 text-xs sm:text-sm leading-relaxed">
+              Controle completo de apostas, baixas de pagamentos, fechamentos diários e auditoria financeira.
             </p>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-emerald-600/50 space-y-2 text-xs text-emerald-200">
+          <div className="hidden sm:block mt-8 pt-6 border-t border-emerald-600/50 space-y-2 text-xs text-emerald-200">
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-amber-300 flex-shrink-0" />
-              <span>Conferência cega e contagem física por cédulas</span>
+              <span>Controle estrito de apostas e baixas de recebimento</span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-amber-300 flex-shrink-0" />
-              <span>Controle estrito de sangrias e reforços de troco</span>
+              <span>Cálculo exato de apurado e descarrego diário</span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-amber-300 flex-shrink-0" />
-              <span>Trilha de auditoria e aprovação gerencial</span>
+              <span>Trilha de auditoria e correção de fechamentos</span>
             </div>
           </div>
         </div>
 
         {/* Right Side: Auth Form */}
-        <div className="p-8 md:p-10 flex flex-col justify-between bg-white">
+        <div className="p-6 sm:p-8 md:p-10 flex flex-col justify-between bg-white">
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Acesso ao Sistema</h2>
+            <div className="mb-5 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Acesso ao Sistema</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Identifique-se com suas credenciais ou selecione um perfil de teste.
+                Identifique-se com suas credenciais ou selecione o acesso rápido abaixo.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  E-mail Corporativo
+                  E-mail de Acesso
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900"
-                    placeholder="seu.email@loterica.com.br"
+                    className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900 transition-colors"
+                    placeholder="jvitorscr1995@gmail.com"
                   />
                 </div>
               </div>
@@ -118,19 +118,19 @@ export const Login: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowRecoverModal(true)}
-                    className="text-xs text-emerald-700 hover:text-emerald-800 font-medium hover:underline"
+                    className="text-xs text-emerald-700 hover:text-emerald-800 font-medium hover:underline p-1 min-h-[32px] flex items-center"
                   >
-                    Recuperar Senha?
+                    Esqueceu a senha?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900"
+                    className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-900 transition-colors"
                     placeholder="••••••••"
                   />
                 </div>
@@ -138,7 +138,7 @@ export const Login: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-700/20 flex items-center justify-center space-x-2 transition-all group"
+                className="w-full min-h-[48px] mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-700/20 flex items-center justify-center space-x-2 transition-all active:scale-[0.98] group"
               >
                 <span>Entrar no Sistema</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -146,30 +146,30 @@ export const Login: React.FC = () => {
             </form>
 
             {/* Quick Profiles Demo Selector */}
-            <div className="mt-8 pt-6 border-t border-slate-100">
+            <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
-                <span>Acesso Rápido por Perfil (Demo):</span>
-                <span className="text-[10px] text-emerald-600 font-semibold">1-clique</span>
+                <span>Acesso Rápido:</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">1-toque</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                 {(users || INITIAL_USERS).map(u => (
                   <button
                     key={u.id}
                     type="button"
                     disabled={u.isActive === false}
                     onClick={() => handleSelectDemoUser(u.email)}
-                    className={`text-left p-2.5 rounded-xl border transition-all text-xs ${
+                    className={`min-h-[44px] text-left p-3 rounded-xl border transition-all text-xs active:scale-95 flex items-center justify-between ${
                       u.isActive === false
                         ? 'border-slate-200 bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed'
-                        : 'border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-slate-800'
+                        : 'border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-slate-800 shadow-xs'
                     }`}
                   >
-                    <div className="font-bold truncate">{u.name}</div>
-                    <div className="text-[10px] uppercase font-bold text-emerald-700 flex items-center justify-between">
-                      <span>{u.role}</span>
-                      {u.isActive === false && (
-                        <span className="text-[9px] text-red-500 font-semibold">Inativo</span>
-                      )}
+                    <div>
+                      <div className="font-bold truncate text-slate-900">{u.name}</div>
+                      <div className="text-[10px] text-slate-500 font-mono truncate">{u.email}</div>
+                    </div>
+                    <div className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 ml-2 flex-shrink-0">
+                      {u.badge || u.role}
                     </div>
                   </button>
                 ))}
@@ -178,7 +178,7 @@ export const Login: React.FC = () => {
           </div>
 
           <div className="mt-6 text-center text-[11px] text-slate-400">
-            Terminal homologado de acordo com as normas da Caixa Econômica Federal
+            Painel interno otimizado para dispositivos móveis e desktop
           </div>
         </div>
       </div>
